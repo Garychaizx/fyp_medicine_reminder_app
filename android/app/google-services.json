@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "258781804883",
+    "project_id": "medicine-reminder-fcaa3",
+    "storage_bucket": "medicine-reminder-fcaa3.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:258781804883:android:20dc08e1bc5e062dbec9a6",
+        "android_client_info": {
+          "package_name": "com.example.medicine_reminder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7SDSq5cRxcyoyAs0mJ2NwX5N2UZ0RTIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
