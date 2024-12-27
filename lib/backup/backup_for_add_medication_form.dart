@@ -1,157 +1,7 @@
-// // import 'package:cloud_firestore/cloud_firestore.dart';
-// // import 'package:flutter/material.dart';
-// // import 'package:medicine_reminder/add_medication_form.dart';
-
-// // // Assuming you have an AddMedicationForm page defined somewhere else in your project
-// // // Import your AddMedicationForm here
-
-// // class MedicationsPage extends StatelessWidget {
-// //   const MedicationsPage({super.key});
-
-// //   @override
-// //   Widget build(BuildContext context) {
-// //     return Scaffold(
-// //         appBar: AppBar(
-// //           title: const Text('Medications'),
-// //           backgroundColor: Colors.blue[100],
-// //         ),
-// //         body: StreamBuilder(
-// //             stream: FirebaseFirestore.instance
-// //                 .collection('medications')
-// //                 .snapshots(),
-// //             builder: (context, snapshot) {
-// //               if (snapshot.connectionState == ConnectionState.waiting) {
-// //                 return const Center(child: CircularProgressIndicator());
-// //               }
-// //               // Check if there is medication data
-// //               final hasMedications =
-// //                   snapshot.hasData && snapshot.data!.docs.isNotEmpty;
-
-// //               return Column(
-// //                 children: [
-// //                   if (!hasMedications)
-// //                     Expanded(
-// //                       // Expands the content to fill the available space
-// //                       child: Column(
-// //                         mainAxisAlignment: MainAxisAlignment.center,
-// //                         children: [
-// //                           Center(
-// //                             child: Container(
-// //                               width: 150, // Set the width of the circle
-// //                               height: 150, // Set the height of the circle
-// //                               decoration: BoxDecoration(
-// //                                 shape: BoxShape.circle,
-// //                                 color: Colors.grey[
-// //                                     200], // Background color of the circle
-// //                               ),
-// //                               child: ClipOval(
-// //                                 child: Image.asset(
-// //                                   'assets/giphy.gif', // Replace with your GIF asset
-// //                                   fit: BoxFit.cover, // Cover the entire circle
-// //                                 ),
-// //                               ),
-// //                             ),
-// //                           ),
-// //                           const SizedBox(
-// //                               height:
-// //                                   20), // Add 20 pixels of space between the GIF and the text
-// //                           const Text(
-// //                             'Manage Your Meds',
-// //                             textAlign: TextAlign.center,
-// //                             style: TextStyle(
-// //                               fontSize: 24,
-// //                               fontWeight: FontWeight.bold,
-// //                             ),
-// //                           ),
-// //                           const Text(
-// //                             'Add your meds to be reminded on time \n and track your health',
-// //                             textAlign: TextAlign.center,
-// //                             style: TextStyle(
-// //                               color: Color.fromARGB(255, 150, 145, 145),
-// //                             ),
-// //                           ),
-// //                         ],
-// //                       ),
-// //                     ),
-// //                   if (hasMedications)
-// //                     Expanded(
-// //                       child: ListView.builder(
-// //                         itemCount: snapshot.data!.docs.length,
-// //                         itemBuilder: (context, index) {
-// //                           var medication = snapshot.data!.docs[index].data();
-// //                           return Card(
-// //                             margin: const EdgeInsets.symmetric(
-// //                                 horizontal: 16.0, vertical: 8.0),
-// //                                 elevation: 4,
-// //                             child: ListTile(
-// //                               title: Text(medication['name'] ?? 'No Name'),
-// //                               subtitle: Text(
-// //                                   medication['frequency'] ?? 'No Frequency'),
-// //                               trailing: Column(
-// //                                 mainAxisAlignment: MainAxisAlignment.center,
-// //                                 children: [
-// //                                   Text(
-// //                                       '${medication['current_inventory']} ${medication['unit']} left'),
-// //                                   const Icon(Icons.alarm, color: Colors.green),
-// //                                 ],
-// //                               ),
-// //                             ),
-// //                           );
-// //                         },
-// //                       ),
-// //                     ),
-// //                   Padding(
-// //                     padding: const EdgeInsets.all(
-// //                         20.0), // Add padding around the button
-// //                     child: SizedBox(
-// //                       width: double.infinity, // Make the button full-width
-// //                       child: ElevatedButton(
-// //                         onPressed: () {
-// //                           // Navigate to the AddMedicationForm page
-// //                           Navigator.push(
-// //                             context,
-// //                             MaterialPageRoute(
-// //                               builder: (context) => AddMedicationForm(),
-// //                             ),
-// //                           );
-// //                         },
-// //                         child: const Text('Add Medication'),
-// //                         style: ElevatedButton.styleFrom(
-// //                           backgroundColor:
-// //                               const Color.fromARGB(255, 27, 50, 126),
-// //                           foregroundColor: Colors.white,
-// //                           padding: const EdgeInsets.symmetric(
-// //                               vertical: 15.0), // Vertical padding
-// //                           shape: RoundedRectangleBorder(
-// //                             borderRadius:
-// //                                 BorderRadius.circular(30.0), // Rounded corners
-// //                           ),
-// //                           textStyle: const TextStyle(
-// //                             fontSize: 18, // Font size
-// //                             fontWeight: FontWeight.bold, // Font weight
-// //                           ),
-// //                         ),
-// //                       ),
-// //                     ),
-// //                   ),
-// //                 ],
-// //               );
-// //             }));
-// //   }
-// // }
-
-
-
-
-
-
-
-
-
-
-
 // import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:flutter/material.dart';
+// import 'package:medicine_reminder/services/notification_service.dart';
 
 // // constant for decorations
 // const double _padding = 20.0;
@@ -174,8 +24,9 @@
 //   final _doseQuantityController = TextEditingController();
 //   String? _unit;
 //   String? _frequency;
-//   TimeOfDay? _reminderTime;
+//   // TimeOfDay? _reminderTime;
 //   int? _doseQuantity;
+//   List<TimeOfDay?> _reminderTimes = [null];
 
 //   // Track if user has tried to proceed to the next step (to show validation)
 //   bool _hasAttemptedStep1 = false;
@@ -195,7 +46,7 @@
 
 //   // Function to validate fields on the third step
 //   bool _isStep3Valid() {
-//     return _reminderTime != null && _doseQuantity != null;
+//     return _doseQuantity != null;
 //   }
 
 //   void _nextPage() {
@@ -225,14 +76,27 @@
 //     }
 //   }
 
-//   Future<void> _selectTime(BuildContext context) async {
+//   void _updateReminderTimes() {
+//     setState(() {
+//       if (_frequency == "Twice a Day") {
+//         _reminderTimes = [null, null];
+//       } else if (_frequency == "Three Times a Day") {
+//         _reminderTimes = [null, null, null];
+//       } else {
+//         _reminderTimes = [null];
+//       }
+//     });
+//   }
+
+// // Modified _selectTime function to pick specific times
+//   Future<void> _selectTime(BuildContext context, int index) async {
 //     final TimeOfDay? picked = await showTimePicker(
 //       context: context,
 //       initialTime: TimeOfDay.now(),
 //     );
-//     if (picked != null && picked != _reminderTime) {
+//     if (picked != null && picked != _reminderTimes[index]) {
 //       setState(() {
-//         _reminderTime = picked;
+//         _reminderTimes[index] = picked;
 //       });
 //     }
 //   }
@@ -366,7 +230,8 @@
 //                 padding: const EdgeInsets.all(_padding),
 //                 child: DropdownButtonFormField<String>(
 //                   value: _frequency,
-//                   items: ['Daily', 'Twice a Day', 'Three Times a Day'].map((String value) {
+//                   items: ['Daily', 'Twice a Day', 'Three Times a Day']
+//                       .map((String value) {
 //                     return DropdownMenuItem<String>(
 //                       value: value,
 //                       child: Text(value),
@@ -375,6 +240,7 @@
 //                   onChanged: (value) {
 //                     setState(() {
 //                       _frequency = value;
+//                       _updateReminderTimes();
 //                     });
 //                   },
 //                   decoration: _getInputDecoration(
@@ -426,7 +292,6 @@
 //               ),
 //             ],
 //           ),
-//           // Step 3: Time and Dose Quantity
 //           Column(
 //             mainAxisAlignment: MainAxisAlignment.center,
 //             children: [
@@ -434,71 +299,67 @@
 //                 padding: const EdgeInsets.all(_padding),
 //                 child: Column(
 //                   children: [
-//                     Container(
-//                       width: double.infinity,
-//                       decoration: BoxDecoration(
-//                         border: Border.all(
-//                           color: (_hasAttemptedStep3 && _reminderTime == null)
-//                               ? Colors
-//                                   .red // Show red border if validation fails
-//                               : Colors.grey[300]!,
-//                         ),
-//                         borderRadius: BorderRadius.circular(_borderRadius),
-//                         color: Colors.grey[50],
-//                       ),
-//                       child: InkWell(
-//                         onTap: () => _selectTime(context),
-//                         borderRadius: BorderRadius.circular(_borderRadius),
-//                         child: Padding(
-//                           padding: const EdgeInsets.symmetric(
-//                             horizontal: 16,
-//                             vertical: 16,
+//                     // Display time pickers for each reminder time based on frequency
+//                     for (int i = 0; i < _reminderTimes.length; i++)
+//                       Padding(
+//                         padding: const EdgeInsets.only(bottom: 8.0),
+//                         child: Container(
+//                           width: double.infinity,
+//                           decoration: BoxDecoration(
+//                             border: Border.all(
+//                               color: (_hasAttemptedStep3 &&
+//                                       _reminderTimes[i] == null)
+//                                   ? Colors.red
+//                                   : Colors.grey[300]!,
+//                             ),
+//                             borderRadius: BorderRadius.circular(_borderRadius),
+//                             color: Colors.grey[50],
 //                           ),
-//                           child: Row(
-//                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                             children: [
-//                               Text(
-//                                 _reminderTime != null
-//                                     ? 'Reminder Time: ${_reminderTime?.format(context)}'
-//                                     : 'Select Reminder Time',
-//                                 style: TextStyle(
-//                                   fontSize: 16,
-//                                   color: _reminderTime != null
-//                                       ? Colors.black
-//                                       : Colors.grey[700],
-//                                 ),
+//                           child: InkWell(
+//                             onTap: () => _selectTime(context, i),
+//                             borderRadius: BorderRadius.circular(_borderRadius),
+//                             child: Padding(
+//                               padding: const EdgeInsets.symmetric(
+//                                 horizontal: 16,
+//                                 vertical: 16,
 //                               ),
-//                               Icon(
-//                                 Icons.access_time,
-//                                 color: _primaryColor,
+//                               child: Row(
+//                                 mainAxisAlignment:
+//                                     MainAxisAlignment.spaceBetween,
+//                                 children: [
+//                                   Text(
+//                                     _reminderTimes[i] != null
+//                                         ? 'Reminder Time ${i + 1}: ${_reminderTimes[i]?.format(context)}'
+//                                         : 'Select Reminder Time ${i + 1}',
+//                                     style: TextStyle(
+//                                       fontSize: 16,
+//                                       color: _reminderTimes[i] != null
+//                                           ? Colors.black
+//                                           : Colors.grey[700],
+//                                     ),
+//                                   ),
+//                                   Icon(
+//                                     Icons.access_time,
+//                                     color: _primaryColor,
+//                                   ),
+//                                 ],
 //                               ),
-//                             ],
+//                             ),
 //                           ),
 //                         ),
 //                       ),
-//                     ),
-//                     if (_hasAttemptedStep3 && _reminderTime == null)
+//                     if (_hasAttemptedStep3 &&
+//                         _reminderTimes.any((time) => time == null))
 //                       const Padding(
 //                         padding: EdgeInsets.only(top: 8, left: 12),
 //                         child: Align(
 //                           alignment: Alignment.centerLeft,
 //                           child: Text(
-//                             'Please select a reminder time',
+//                             'Please select all reminder times',
 //                             style: TextStyle(
 //                               color: Colors.red,
 //                               fontSize: 12,
 //                             ),
-//                           ),
-//                         ),
-//                       ),
-//                     if (_reminderTime != null)
-//                       Padding(
-//                         padding: const EdgeInsets.only(top: 8),
-//                         child: Text(
-//                           'Selected time: ${_reminderTime?.format(context)}',
-//                           style: TextStyle(
-//                             color: Colors.grey[600],
-//                             fontSize: 14,
 //                           ),
 //                         ),
 //                       ),
@@ -527,36 +388,61 @@
 //               ElevatedButton(
 //                 onPressed: () async {
 //                   setState(() {
-//                     _hasAttemptedStep3 =
-//                         true; // Mark that user attempted to submit
+//                     _hasAttemptedStep3 = true;
 //                   });
 
 //                   if (_isStep3Valid()) {
 //                     if (_medicationNameController.text.isNotEmpty &&
 //                         _unit != null &&
 //                         _frequency != null &&
-//                         _reminderTime != null &&
+//                         // _reminderTimes.every((time) => time != null) &&
 //                         _doseQuantity != null) {
+//                       User? currentUser = FirebaseAuth.instance.currentUser;
+//                       if (currentUser == null) {
+//                         ScaffoldMessenger.of(context).showSnackBar(
+//                           SnackBar(content: Text('Error: User not logged in')),
+//                         );
+//                         return;
+//                       }
+//                       // Convert reminder times to strings
+//                       List<String> reminderTimes = _reminderTimes
+//                           .map((time) => time?.format(context) ?? '')
+//                           .toList();
+
 //                       Map<String, dynamic> medicationData = {
 //                         'name': _medicationNameController.text,
 //                         'unit': _unit,
 //                         'frequency': _frequency,
-//                         'reminder_time': _reminderTime?.format(context),
+//                         'reminder_times':
+//                             reminderTimes, // Save multiple times to Firebase
 //                         'dose_quantity': _doseQuantity,
 //                         'created_at': FieldValue.serverTimestamp(),
-//                         'current_inventory': _inventoryController.text
+//                         'current_inventory': _inventoryController.text,
+//                         'user_uid': currentUser.uid
 //                       };
 
 //                       try {
-//                         await FirebaseFirestore.instance
+//                         // Add medication to Firestore and retrieve the document ID
+//                         DocumentReference docRef = await FirebaseFirestore
+//                             .instance
 //                             .collection('medications')
 //                             .add(medicationData);
 
+//                         // Schedule notifications for each reminder time
+//                         for (String time in reminderTimes) {
+//                           NotificationService().scheduleMedicationReminder(
+//                             docRef.id,
+//                             medicationData['name'],
+//                             time,
+//                           );
+//                         }
+
+//                         // Clear form fields after successful submission
 //                         _medicationNameController.clear();
 //                         _unit = null;
 //                         _inventoryController.clear();
 //                         _frequency = null;
-//                         _reminderTime = null;
+//                         _reminderTimes = [null];
 //                         _doseQuantity = null;
 
 //                         Navigator.pop(context);

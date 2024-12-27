@@ -21,7 +21,12 @@ class NotificationService {
   }
 
 Future<void> scheduleMedicationReminder(
-    String medicationId, String medicationName, String reminderTime) async {
+  String medicationId,
+  String medicationName,
+  String reminderTime,
+  int doseQuantity,
+  String unit,
+  ) async {
   try {
     debugPrint('Received reminder time: $reminderTime');
 
@@ -45,19 +50,21 @@ Future<void> scheduleMedicationReminder(
       hour = 0;
     }
 
-    // Show rescheduled time in 24-hour format
-    // debugPrint('Rescheduled notification time: ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
+    // Generate a unique ID based on medication ID, hour, and minute
+    int uniqueId = medicationId.hashCode + hour * 60 + minute;
 
-    // Create notification schedule with daily repeat
+    // Schedule the notification with a unique ID
     await AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: medicationId.hashCode,
+        id: uniqueId,
         channelKey: 'medication_channel',
         title: 'Medicine Reminder',
-        body: 'Time to take $medicationName',
+        body: 'Time to take $doseQuantity $unit of $medicationName',
         category: NotificationCategory.Reminder,
         wakeUpScreen: true,
         payload: {'medicationId': medicationId},
+        // customSound: 'assets/alarm_sound.mp3', // Replace with your custom sound file path
+        duration: const Duration(seconds: 5), // Set the duration of the sound
       ),
       actionButtons: [
         NotificationActionButton(
@@ -74,12 +81,17 @@ Future<void> scheduleMedicationReminder(
       ),
     );
 
-    debugPrint('Notification scheduled successfully for daily repeat');
+    debugPrint('Notification scheduled successfully for daily repeat at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
   } catch (e) {
     debugPrint('Error scheduling notification: $e');
   }
 }
 
+  Future<void> cancelAllMedicationReminders() async {
+      // Logic to cancel all scheduled notifications
+      await AwesomeNotifications().cancelAll();
+      print('All medication reminders canceled.');
+    }
 
   Future<void> _handleMedicationTaken(String medicationId) async {
     if (medicationId.isEmpty) return;
@@ -107,11 +119,8 @@ Future<void> scheduleMedicationReminder(
     }
   }
 
-  Future<void> cancelNotification(int id) async {
-    try {
-      await AwesomeNotifications().cancel(id);
-    } catch (e) {
-      debugPrint('Error canceling notification: $e');
-    }
+  Future<void> cancelMedicationReminder(String medicationId) async {
+    await AwesomeNotifications().cancel(medicationId.hashCode); // Use a unique identifier for the notification
+    print('Canceled notification for medication ID: $medicationId');
   }
 }

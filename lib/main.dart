@@ -1,9 +1,12 @@
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
+import 'package:medicine_reminder/pages/login_page.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
+
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -17,14 +20,68 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
   }
 }
 
+Future<void> scheduleAllNotifications() async {
+  try {
+    String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (currentUserId == null) {
+      print('No user is currently logged in.');
+      return;
+    }
+
+    var medications = await FirebaseFirestore.instance.collection('medications').where('user_uid', isEqualTo: currentUserId).get();
+    print('Fetched ${medications.docs.length} medications from Firestore.');
+    
+    // List to hold scheduled medications
+    List<String> scheduledMedications = [];
+
+    for (var doc in medications.docs) {
+      var medication = doc.data();
+      print('Scheduling reminders for medication: ${medication['name']}');
+      
+      if (medication['reminder_times'] != null && medication['name'] != null) {
+        for (String time in List<String>.from(medication['reminder_times'])) {
+          print('Scheduling reminder at $time for ${medication['name']}');
+          await NotificationService().scheduleMedicationReminder(
+            doc.id,
+            medication['name'],
+            time,
+            medication['dose_quantity'],
+            medication['unit'],
+          );
+          // Add to the list of scheduled medications
+          scheduledMedications.add('${medication['name']} at $time');
+        }
+      }
+    }
+    // Print all scheduled medications
+    if (scheduledMedications.isNotEmpty) {
+      print('Scheduled Medications:');
+      for (var scheduled in scheduledMedications) {
+        print(scheduled);
+      }
+    } else {
+      print('No medications scheduled.');
+    }
+
+  } catch (e) {
+    print('Error scheduling notifications: $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  print('Firebase initialized.');
+
   // Initialize NotificationService
   NotificationService notificationService = NotificationService();
   await notificationService.initializeNotification();
+  print('NotificationService initialized.');
 
+  // Initialize Awesome Notifications
   await AwesomeNotifications().initialize(
     null,
     [
@@ -38,33 +95,50 @@ void main() async {
         channelShowBadge: true,
       ),
     ],
-    debug: true
+    debug: true,
   );
+  print('AwesomeNotifications initialized.');
 
-  // Set up the action listener
+  // Set up the action listener for notifications
   await AwesomeNotifications().setListeners(
     onActionReceivedMethod: onActionReceivedMethod,
   );
+  print('Notification action listener set up.');
 
-  // Fetch medications and schedule notifications on app startup
-  FirebaseFirestore.instance.collection('medications').get().then((snapshot) {
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final medicationId = doc.id;
-      final medicationName = data['name'];
-      final reminderTime = data['reminder_time'];
+  // Cancel all existing notifications at app start to prevent previous set reminder pop up
+  await notificationService.cancelAllMedicationReminders();
 
-      // Use the instance of notificationService to schedule notifications
-      notificationService.scheduleMedicationReminder(
-          medicationId, medicationName, reminderTime);
-    }
-  }).catchError((error) {
-    debugPrint('Error fetching medications: $error');
-  });
+   // Set up a listener for medication changes
+  String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  if (currentUserId != null) {
+    FirebaseFirestore.instance.collection('medications')
+        .where('user_uid', isEqualTo: currentUserId)
+        .snapshots()
+        .listen((snapshot) {
+          // Check if there are no medications
+          if (snapshot.docs.isEmpty) {
+            // Cancel all notifications if no medications are found
+            NotificationService().cancelAllMedicationReminders();
+          } else {
+            // Handle changes in the medications collection
+            for (var change in snapshot.docChanges) {
+              if (change.type == DocumentChangeType.removed) {
+                // Cancel the notification for the removed medication
+                NotificationService().cancelMedicationReminder(change.doc.id);
+              }
+            }
+            // Re-schedule notifications for the current medications
+            scheduleAllNotifications();
+          }
+        });
+  }
+
+  // Schedule notifications at app start
+  await scheduleAllNotifications();
+  print('All notifications scheduled.');
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -77,7 +151,21 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const Navbar(),
+      // Redirect to appropriate page based on authentication status
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasData) {
+            // User is logged in, navigate to the main app (Navbar)
+            return const Navbar();
+          }
+          // User is not logged in, show the LoginPage
+          return LoginPage();
+        },
+      ),
     );
   }
 }
