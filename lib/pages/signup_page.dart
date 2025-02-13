@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/services/auth_service.dart';
@@ -15,7 +16,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController ageController = TextEditingController();
   final AuthService authService = AuthService();
 
-  void handleSignup() async {
+void handleSignup() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final name = nameController.text.trim();
@@ -53,10 +54,15 @@ class _SignupPageState extends State<SignupPage> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
+  String errorMessage = 'Sign-up failed';
+  if (e is FirebaseAuthException) {
+    errorMessage = e.message ?? 'Sign-up failed';
+  }
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(errorMessage)),
+  );
+}
   }
 
   @override

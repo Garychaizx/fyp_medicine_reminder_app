@@ -94,8 +94,17 @@ void main() async {
         importance: NotificationImportance.High,
         channelShowBadge: true,
       ),
+          NotificationChannel(
+      channelKey: 'refill_channel',
+      channelName: 'Refill Reminders',
+      channelDescription: 'Channel for medication refill reminders',
+      defaultColor: const Color.fromARGB(255, 126, 50, 27),
+      ledColor: Colors.red,
+      importance: NotificationImportance.High,
+      channelShowBadge: true,
+    ),
     ],
-    debug: true,
+    debug: true,//change when cant run
   );
   print('AwesomeNotifications initialized.');
 
@@ -128,7 +137,8 @@ void main() async {
               }
             }
             // Re-schedule notifications for the current medications
-            scheduleAllNotifications();
+            //****
+            // scheduleAllNotifications();
           }
         });
   }
@@ -136,6 +146,8 @@ void main() async {
   // Schedule notifications at app start
   await scheduleAllNotifications();
   print('All notifications scheduled.');
+
+  NotificationService().monitorMedicationInventory();
 
   runApp(const MyApp());
 }
@@ -151,6 +163,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      debugShowCheckedModeBanner: false,
       // Redirect to appropriate page based on authentication status
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -162,6 +175,7 @@ class MyApp extends StatelessWidget {
             // User is logged in, navigate to the main app (Navbar)
             return const Navbar();
           }
+          
           // User is not logged in, show the LoginPage
           return LoginPage();
         },

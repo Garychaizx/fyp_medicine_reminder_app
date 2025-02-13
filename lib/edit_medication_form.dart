@@ -1,5 +1,6 @@
 // import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:medicine_reminder/constants/styles.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/widgets/custom_dropdown.dart';
@@ -34,7 +35,9 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
   late TextEditingController doseQuantityController;
   String? _frequency;
   bool _hasAttemptedSubmit = false;
-
+  late TextEditingController refillThresholdController;
+  TimeOfDay? refillReminderTime;
+  bool refillReminderEnabled = false;
   final _medicationService = MedicationService();
 
   @override
@@ -53,6 +56,13 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
         List<String>.from(widget.medicationData['reminder_times'] ?? ['']);
     for (String time in existingTimes) {
       reminderTimeControllers.add(TextEditingController(text: time));
+      // Initialize refill reminder fields
+      refillReminderEnabled =
+          widget.medicationData['refill_reminder_enabled'] ?? false;
+      refillThresholdController = TextEditingController(
+          text: widget.medicationData['refill_threshold']?.toString() ?? '');
+      String? storedTime = widget.medicationData['refill_reminder_time'];
+      refillReminderTime = storedTime != null ? _parseTime(storedTime) : null;
     }
   }
 
@@ -91,6 +101,11 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
         'frequency': _frequency,
         'current_inventory': int.tryParse(currentInventoryController.text) ?? 0,
         'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
+        'refill_threshold': int.tryParse(refillThresholdController.text) ?? 0,
+        'refill_reminder_enabled': refillReminderEnabled,
+        'refill_reminder_time': refillReminderTime != null
+            ? _formatTime(refillReminderTime!)
+            : null, // Ensure it's saved in "6:38 PM" format
       };
 
       await _medicationService.updateMedication(
@@ -117,8 +132,20 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     }
   }
 
-  TimeOfDay? _parseTime(String timeString) {
+  String _formatTime(TimeOfDay time) {
+  final now = DateTime.now();
+  final dateTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+  return DateFormat.jm().format(dateTime); // Converts to "6:38 PM" format
+}
+
+
+TimeOfDay? _parseTime(String timeString) {
   try {
+    // Normalize spaces (replace any non-breaking or narrow spaces with a standard space)
+    timeString = timeString.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    print('Normalized Time String: $timeString'); // Debugging
+    
     // Parse the time string into a TimeOfDay object
     final parts = timeString.split(' ');
     if (parts.length == 2) {
@@ -156,7 +183,7 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
                   ? 'Required'
                   : null,
             ),
-            
+
             // Reminder Times
             ...reminderTimeControllers.asMap().entries.map((entry) {
               int index = entry.key;
@@ -165,14 +192,17 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
               TimeOfDay? currentTime = _parseTime(controller.text);
 
               return SizedBox(
-                width: double.infinity, // Ensures the widget takes up full width
+                width:
+                    double.infinity, // Ensures the widget takes up full width
                 child: ReminderTimePicker(
                   index: index,
                   time: currentTime, // Pass the current time to the widget
-                  hasAttempted: _hasAttemptedSubmit, // If you want to show error state
+                  hasAttempted:
+                      _hasAttemptedSubmit, // If you want to show error state
                   onSelect: (selectedTime) {
                     setState(() {
-                      controller.text = selectedTime?.format(context) ?? ''; // Update controller text
+                      controller.text = selectedTime?.format(context) ??
+                          ''; // Update controller text
                     });
                   },
                 ),
@@ -181,20 +211,20 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
 
             // Frequency
             // const SizedBox(height: 16),
-            CustomDropdown(
-              value: _frequency,
-              items: const ['Daily', 'Twice a Day', 'Three Times a Day'],
-              onChanged: (value) {
-                setState(() {
-                  _frequency = value;
-                  _updateReminderTimeFields();
-                });
-              },
-              label: 'Frequency',
-              errorText: _hasAttemptedSubmit && _frequency == null
-                  ? 'Please select a frequency'
-                  : null,
-            ),
+            // CustomDropdown(
+            //   value: _frequency,
+            //   items: const ['Once a Day', 'Twice a Day', 'Three Times a Day'],
+            //   onChanged: (value) {
+            //     setState(() {
+            //       _frequency = value;
+            //       _updateReminderTimeFields();
+            //     });
+            //   },
+            //   label: 'Frequency',
+            //   errorText: _hasAttemptedSubmit && _frequency == null
+            //       ? 'Please select a frequency'
+            //       : null,
+            // ),
 
             // Current Inventory
             CustomFormField(
@@ -218,6 +248,42 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
                       : null,
               keyboardType: TextInputType.number,
             ),
+            // Refill Reminder Toggle
+            SwitchListTile(
+              title: const Text('Refill Reminder'),
+              value: refillReminderEnabled,
+              onChanged: (value) {
+                setState(() {
+                  refillReminderEnabled = value;
+                  if (!value) {
+                    refillThresholdController.clear();
+                    refillReminderTime = null;
+                  }
+                });
+              },
+            ),
+
+            // Refill Reminder Fields
+            if (refillReminderEnabled) ...[
+              CustomFormField(
+                controller: refillThresholdController,
+                label: 'Refill Reminder Threshold (Inventory)',
+                keyboardType: TextInputType.number,
+                errorText: _hasAttemptedSubmit &&
+                        refillThresholdController.text.isEmpty
+                    ? 'Please enter a refill threshold'
+                    : null,
+              ),
+              ReminderTimePicker(
+                index: 0,
+                time: refillReminderTime,
+                hasAttempted: _hasAttemptedSubmit,
+                onSelect: (time) {
+                  setState(() => refillReminderTime = time);
+                },
+              ),
+            ],
+
             SizedBox(
               width: 380,
               child: Column(

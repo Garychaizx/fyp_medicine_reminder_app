@@ -4,18 +4,18 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // Sign up
-  Future<User?> signUp(String email, String password) async {
-    try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCredential.user;
-    } catch (e) {
-      print('Error during sign-up: $e');
-      return null;
-    }
+Future<User?> signUp(String email, String password) async {
+  try {
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return userCredential.user;
+  } on FirebaseAuthException catch (e) {
+    print('Error during sign-up: ${e.message}');
+    rethrow; // This will propagate the exception
   }
+}
 
   // Log in
   Future<User?> logIn(String email, String password) async {

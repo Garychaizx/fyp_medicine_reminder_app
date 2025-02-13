@@ -1,8 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
 import 'package:medicine_reminder/pages/medications_page.dart';
+import 'package:medicine_reminder/pages/profile_page.dart';
+import 'package:medicine_reminder/pages/task_visualization_page.dart';
 import 'package:medicine_reminder/services/auth_service.dart';
+
+Future<Map<String, dynamic>> fetchUserData() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) throw Exception("No logged-in user found");
+
+  final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+  if (!userDoc.exists) throw Exception("User data not found");
+
+  return userDoc.data()!;
+}
 
 class Navbar extends StatefulWidget {
   const Navbar({super.key});
@@ -26,20 +40,31 @@ class _NavBarState extends State<Navbar> {
 
   final List<Widget> _pages = [
     // Replace with your home page
-    const Text('Home Page'),
+    TaskVisualizationPage(),
     // Replace with your updates page
     const Text('Updates Page'),
     // The new medications page
     MedicationsPage(),
     // Replace with your manage page
-    const Text('Manage Page'),
+    FutureBuilder<Map<String, dynamic>>(
+    future: fetchUserData(), // Create a function to fetch user data
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        return Center(child: Text('Error: ${snapshot.error}'));
+      } else {
+        return ProfilePage(userData: snapshot.data ?? {});
+      }
+    },
+  ),
   ];
 
     final List<String> _titles = [
     'Home',
     'Updates',
     'Medications',
-    'Manage',
+    'Profile',
   ];
 
   @override
@@ -80,7 +105,7 @@ class _NavBarState extends State<Navbar> {
             ),
             GButton(
               icon: Icons.format_list_bulleted,
-              text: 'Manage',
+              text: 'Profile',
             ),
           ],
           onTabChange: (index) {
@@ -93,3 +118,4 @@ class _NavBarState extends State<Navbar> {
     );
   }
 }
+

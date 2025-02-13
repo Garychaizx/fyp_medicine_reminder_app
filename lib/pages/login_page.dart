@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/signup_page.dart';
@@ -20,7 +21,8 @@ class _LoginPageState extends State<LoginPage> {
 
     if (user != null) {
       // Navigate to the main app (e.g., Navbar)
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => Navbar()));
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => Navbar()));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed! Check your credentials.')),
@@ -40,6 +42,7 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: emailController,
               decoration: InputDecoration(labelText: 'Email'),
+              // obscureText: true,
             ),
             TextField(
               controller: passwordController,
@@ -59,6 +62,24 @@ class _LoginPageState extends State<LoginPage> {
                 );
               },
               child: Text('Don’t have an account? Sign up'),
+            ),
+            TextButton(
+              onPressed: () async {
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(
+                      email: emailController.text.trim());
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Password reset email sent')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text('Error sending reset email: ${e.toString()}')),
+                  );
+                }
+              },
+              child: Text('Forgot Password?'),
             ),
           ],
         ),
