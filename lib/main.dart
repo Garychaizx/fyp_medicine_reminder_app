@@ -5,10 +5,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
+import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 // Add this static method to receive notification actions
 @pragma('vm:entry-point')
@@ -22,6 +24,7 @@ Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
 
 Future<void> scheduleAllNotifications() async {
   try {
+    MedicationService medicationService = MedicationService();
     String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     if (currentUserId == null) {
@@ -39,7 +42,35 @@ Future<void> scheduleAllNotifications() async {
       var medication = doc.data();
       print('Scheduling reminders for medication: ${medication['name']}');
       
-      if (medication['reminder_times'] != null && medication['name'] != null) {
+      // Handle "Every X Hours" frequency
+      if (medication['frequency'] == 'Every X Hours' &&
+          medication['interval_starting_time'] != null &&
+          medication['interval_ending_time'] != null &&
+          medication['interval_hour'] != null) {
+        
+        // Calculate reminder times for interval-based medication
+        List<String> calculatedTimes = medicationService.calculateHourlyReminderTimes(
+          medication['interval_starting_time'],
+          medication['interval_ending_time'],
+          medication['interval_hour']
+        );
+        
+        // Schedule notifications for each calculated time
+        for (String time in calculatedTimes) {
+          print('Scheduling interval-based reminder at $time for ${medication['name']}');
+          await NotificationService().scheduleMedicationReminder(
+            doc.id,
+            medication['name'],
+            time,
+            medication['dose_quantity'],
+            medication['unit']
+          );
+          // Add to the list of scheduled medications
+          scheduledMedications.add('${medication['name']} at $time (interval-based)');
+        }
+      }
+      // Handle specific reminder times
+      else if (medication['reminder_times'] != null && medication['name'] != null) {
         for (String time in List<String>.from(medication['reminder_times'])) {
           print('Scheduling reminder at $time for ${medication['name']}');
           await NotificationService().scheduleMedicationReminder(
@@ -54,6 +85,7 @@ Future<void> scheduleAllNotifications() async {
         }
       }
     }
+    
     // Print all scheduled medications
     if (scheduledMedications.isNotEmpty) {
       print('Scheduled Medications:');
@@ -68,6 +100,7 @@ Future<void> scheduleAllNotifications() async {
     print('Error scheduling notifications: $e');
   }
 }
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

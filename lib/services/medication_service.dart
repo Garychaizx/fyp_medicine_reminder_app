@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:medicine_reminder/models/medication.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
@@ -18,24 +19,126 @@ class MedicationService {
         _notificationService = notificationService ?? NotificationService();
 
   User? get currentUser => _auth.currentUser;
-  Future<void> addMedication(Medication medication) async {
-    try {
-      // Add to Firestore
-      final docRef =
-          await _firestore.collection('medications').add(medication.toMap());
 
-      // Schedule notifications
+Future<void> addMedication(Medication medication) async {
+  try {
+    // Add to Firestore
+    final docRef = await _firestore.collection('medications').add(medication.toMap());
+
+    // For "Every X Hours" frequency, calculate reminder times
+    if (medication.frequency == 'Every X Hours' && 
+        medication.startingTime != null && 
+        medication.endingTime != null && 
+        medication.hourInterval != null) {
+      
+      // Calculate reminder times based on interval
+      List<String> calculatedTimes = calculateHourlyReminderTimes(
+        medication.startingTime!,
+        medication.endingTime!,
+        medication.hourInterval!
+      );
+      
+      // Schedule each calculated reminder
+      for (String time in calculatedTimes) {
+        await _notificationService.scheduleMedicationReminder(
+          docRef.id,
+          medication.name,
+          time,
+          medication.doseQuantity,
+          medication.unit
+        );
+      }
+    } 
+    // For specific reminder times
+    else if (medication.reminderTimes.isNotEmpty) {
       for (String time in medication.reminderTimes) {
         if (time.isNotEmpty) {
-          await _notificationService.scheduleMedicationReminder(docRef.id,
-              medication.name, time, medication.doseQuantity, medication.unit);
+          await _notificationService.scheduleMedicationReminder(
+            docRef.id,
+            medication.name,
+            time,
+            medication.doseQuantity,
+            medication.unit
+          );
         }
       }
-    } catch (e) {
-      throw Exception('Failed to add medication: $e');
     }
+  } catch (e) {
+    throw Exception('Failed to add medication: $e');
+  }
+}
+
+List<String> calculateHourlyReminderTimes(
+  String startTimeStr,
+  String endTimeStr,
+  int hourInterval
+) {
+  List<String> reminderTimes = [];
+  
+  // Parse start and end times
+  DateTime? startTime = _parseTime(startTimeStr);
+  DateTime? endTime = _parseTime(endTimeStr);
+  
+  if (startTime == null || endTime == null || hourInterval <= 0) {
+    debugPrint('Invalid time parameters: start=$startTimeStr, end=$endTimeStr, interval=$hourInterval');
+    return reminderTimes;
+  }
+  
+  // If end time is earlier than start time, assume it's for the next day
+  if (endTime.isBefore(startTime)) {
+    endTime = endTime.add(Duration(days: 1));
+  }
+  
+  // Calculate times
+  DateTime currentTime = startTime;
+  while (!currentTime.isAfter(endTime)) {
+    reminderTimes.add(_formatTime(currentTime));
+    currentTime = currentTime.add(Duration(hours: hourInterval));
   }
 
+  return reminderTimes;
+}
+DateTime? _parseTime(String timeStr) {
+  try {
+    final RegExp timeRegex = RegExp(r'(\d+):(\d+)\s*(AM|PM)', caseSensitive: false);
+    final Match? match = timeRegex.firstMatch(timeStr);
+    
+    if (match != null) {
+      int hour = int.parse(match.group(1)!);
+      int minute = int.parse(match.group(2)!);
+      String period = match.group(3)!.toUpperCase();
+      
+      // Convert to 24-hour format
+      if (period == 'PM' && hour != 12) {
+        hour += 12;
+      } else if (period == 'AM' && hour == 12) {
+        hour = 0;
+      }
+      
+      // Use a fixed date (today) for comparison purposes only
+      return DateTime(2000, 1, 1, hour, minute);
+    }
+  } catch (e) {
+    debugPrint('Error parsing time: $e');
+  }
+  return null;
+}
+
+// Helper to format DateTime to string
+String _formatTime(DateTime dateTime) {
+  int hour = dateTime.hour;
+  final String period = hour >= 12 ? 'PM' : 'AM';
+  
+  // Convert to 12-hour format
+  if (hour > 12) {
+    hour -= 12;
+  } else if (hour == 0) {
+    hour = 12;
+  }
+  
+  final int minute = dateTime.minute;
+  return '$hour:${minute.toString().padLeft(2, '0')} $period';
+}
   Future<void> updateMedication(
     String medicationId,
     Map<String, dynamic> updatedData,
@@ -85,6 +188,9 @@ Stream<List<Map<String, dynamic>>> fetchMedicationsForUser() {
 
 Map<String, List<Map<String, dynamic>>> groupMedicationsByTime(
     List<Map<String, dynamic>> medications, DateTime selectedDay) {
+  
+  final selectedDateOnly = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+
   final medicationsForSelectedDay = medications.where((medication) {
     final createdAtRaw = medication['created_at'];
 
@@ -93,12 +199,29 @@ Map<String, List<Map<String, dynamic>>> groupMedicationsByTime(
     }
 
     final createdAt = createdAtRaw.toDate();
-    return createdAt.isBefore(selectedDay) || createdAt.isAtSameMomentAs(selectedDay);
+    final createdDateOnly = DateTime(createdAt.year, createdAt.month, createdAt.day);
+
+    return createdDateOnly.isBefore(selectedDateOnly) || createdDateOnly.isAtSameMomentAs(selectedDateOnly);
   }).toList();
 
   final groupedMedications = <String, List<Map<String, dynamic>>>{};
   for (final medication in medicationsForSelectedDay) {
-    final reminderTimes = List<String>.from(medication['reminder_times'] ?? []);
+    List<String> reminderTimes = List<String>.from(medication['reminder_times'] ?? []);
+
+    // Check if medication has "Every X Hours" frequency and calculate times dynamically
+    if (medication['frequency'] == 'Every X Hours' &&
+        medication.containsKey('interval_starting_time') &&
+        medication.containsKey('interval_ending_time') &&
+        medication.containsKey('interval_hour')) {
+      
+      // Call the function to calculate reminder times
+      reminderTimes = calculateHourlyReminderTimes(
+        medication['interval_starting_time'],
+        medication['interval_ending_time'],
+        medication['interval_hour'],
+      );
+    }
+
     for (final time in reminderTimes) {
       groupedMedications[time] ??= [];
       groupedMedications[time]!.add(medication);

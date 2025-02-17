@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/constants/styles.dart';
+import 'package:medicine_reminder/widgets/hour_picker_modal.dart';
 
 class Step3 extends StatefulWidget {
   final dynamic formData;
@@ -21,6 +22,7 @@ class _Step3State extends State<Step3> {
   String? _selectedFrequency;
   int? _timesPerDay;
   String? _errorText; // Error message for validation
+  int _hourInterval = 1;
 
   final List<String> _options = [
     'Multiple times daily',
@@ -42,13 +44,41 @@ class _Step3State extends State<Step3> {
       _selectedFrequency = option;
       widget.formData.frequency = option;
 
-      if (option != 'Multiple times daily') {
-        _timesPerDay = null;
+      if (option == 'Every X Hours') {
+        widget.formData.frequencyDetails = _hourInterval; // Default interval
+        widget.formData.hourInterval = _hourInterval; // Default interval
+      } else {
         widget.formData.frequencyDetails = null;
       }
 
       _errorText = null; // Clear error when user selects an option
     });
+  }
+
+  // void _updateHourInterval(int value) {
+  //   setState(() {
+  //     _hourInterval = value;
+  //     widget.formData.frequencyDetails = value;
+  //   });
+  // }
+
+  void _showHourPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return HourPickerModal(
+          initialValue: _hourInterval,
+          onValueSelected: (selectedValue) {
+            setState(() {
+              _hourInterval = selectedValue; // Update state with selected value
+            });
+          },
+        );
+      },
+    );
   }
 
   void _updateTimesPerDay(int value) {
@@ -74,6 +104,7 @@ class _Step3State extends State<Step3> {
     _clearStep3Data();
     widget.onBack();
   }
+  
 
   void _validateAndProceed() {
     if (_selectedFrequency == null) {
@@ -201,7 +232,7 @@ class _Step3State extends State<Step3> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: DropdownButton<int>(
-                                value: _timesPerDay,
+                                 value: _timesOptions.contains(_timesPerDay) ? _timesPerDay : null,
                                 hint: const Text("Select"),
                                 isExpanded: true,
                                 underline: const SizedBox(),
@@ -221,6 +252,52 @@ class _Step3State extends State<Step3> {
                           ],
                         ),
                       ),
+                    ],
+                    if (isSelected && option == 'Every X Hours') ...[
+                      Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Interval (hours):",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color.fromARGB(255, 11, 24, 66),
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: _showHourPicker,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        const Color.fromARGB(255, 11, 24, 66),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text("Every $_hourInterval hours"),
+                                ),
+                              ],
+                            ),
+                          )),
                     ],
                   ],
                 );

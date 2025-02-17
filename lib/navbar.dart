@@ -70,16 +70,23 @@ class _NavBarState extends State<Navbar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => handleLogout(context),
-          ),
-        ],
-        backgroundColor:const Color.fromARGB(201, 36, 76, 179),
-      ),
+appBar: AppBar(
+  title: Text(
+    _titles[_currentIndex],
+    style: TextStyle(
+      fontSize: 20,  // Adjust font size as needed
+      fontWeight: FontWeight.bold, // Make it bold
+      color: Colors.white, // Change color to white
+    ),
+  ),
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.logout),
+      onPressed: () => handleLogout(context),
+    ),
+  ],
+  backgroundColor: const Color.fromARGB(255, 2, 3, 47),
+),
       body: _pages[_currentIndex],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),

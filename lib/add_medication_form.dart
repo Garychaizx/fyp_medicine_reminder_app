@@ -28,12 +28,16 @@ class FormData {
   int? refillThreshold;
   TimeOfDay? refillReminderTime;
   int? frequencyDetails; // Fix: Add this property
+  int? hourInterval; // Fix: Add this property
+  TimeOfDay? startingTime;
+  TimeOfDay? endingTime;
 
   bool get isStep1Valid =>
-      medicationNameController.text.isNotEmpty && unit != null && inventoryController.text.isNotEmpty;
+      medicationNameController.text.isNotEmpty &&
+      unit != null &&
+      inventoryController.text.isNotEmpty;
 
-  bool get isStep2Valid =>
-      frequency != null;
+  bool get isStep2Valid => frequency != null;
 
   bool get isStep3Valid {
     final refillReminderValid = !refillReminderEnabled ||
@@ -55,13 +59,13 @@ class FormData {
   //   }
   // }
 
-void updateReminderTimes() {
-  if (frequencyDetails != null && frequencyDetails! > 0) {
-    reminderTimes = List.filled(frequencyDetails!, null);
-  } else {
-    reminderTimes = [null];  // Default to one reminder if not set
+  void updateReminderTimes() {
+    if (frequencyDetails != null && frequencyDetails! > 0) {
+      reminderTimes = List.filled(frequencyDetails!, null);
+    } else {
+      reminderTimes = [null]; // Default to one reminder if not set
+    }
   }
-}
 
   void clear() {
     medicationNameController.clear();
@@ -86,14 +90,16 @@ void updateReminderTimes() {
       name: medicationNameController.text,
       unit: unit!,
       frequency: frequency!,
-      reminderTimes:
-          reminderTimes.map((time) => time?.format(context) ?? '').toList(),
+      reminderTimes:reminderTimes.map((time) => time?.format(context) ?? '').toList(),
       doseQuantity: doseQuantity!,
       currentInventory: inventoryValue,
       userUid: currentUser.uid,
       refillReminderEnabled: refillReminderEnabled,
       refillThreshold: refillThreshold,
       refillReminderTime: refillReminderTime?.format(context),
+      startingTime: startingTime?.format(context), // Convert TimeOfDay to String
+      endingTime: endingTime?.format(context), // Convert TimeOfDay to String
+      hourInterval: hourInterval,
     );
   }
 }
@@ -114,7 +120,6 @@ class _AddMedicationFormState extends State<AddMedicationForm> {
   final FormData _formData = FormData();
   final List<int> _navigationHistory = [];
 
-
   int _currentPage = 0;
   bool _hasAttemptedStep1 = false;
   bool _hasAttemptedStep2 = false;
@@ -127,19 +132,21 @@ class _AddMedicationFormState extends State<AddMedicationForm> {
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
-  return Align(
-    alignment: Alignment.topCenter,  // Ensures the new widget aligns properly
-    child: SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(1, 0), // Slide in from right
-        end: Offset.zero, 
-      ).animate(animation),
-      child: child,
-    ),
-  );
-},
+          return Align(
+            alignment:
+                Alignment.topCenter, // Ensures the new widget aligns properly
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0), // Slide in from right
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
 
-        child: _buildStep(_currentPage), // Ensures only one child is displayed at a time
+        child: _buildStep(
+            _currentPage), // Ensures only one child is displayed at a time
       ),
     );
   }
@@ -180,41 +187,41 @@ class _AddMedicationFormState extends State<AddMedicationForm> {
     }
   }
 
-void _nextPage() {
-  setState(() {
-    _navigationHistory.add(_currentPage); // Save the current page before moving forward
+  void _nextPage() {
+    setState(() {
+      _navigationHistory
+          .add(_currentPage); // Save the current page before moving forward
 
-    if (_currentPage == 0) {
-      _hasAttemptedStep1 = true;
-      if (_formData.isStep1Valid) {
+      if (_currentPage == 0) {
+        _hasAttemptedStep1 = true;
+        if (_formData.isStep1Valid) {
+          _currentPage++;
+        }
+      } else if (_currentPage == 1) {
+        _hasAttemptedStep2 = true;
+        if (_formData.isStep2Valid) {
+          _currentPage +=
+              (_formData.frequency == "I need more options...") ? 1 : 2;
+        }
+      } else if (_currentPage == 2) {
         _currentPage++;
+      } else if (_currentPage == 3) {
+        _hasAttemptedStep3 = true;
+        if (_formData.isStep3Valid) {
+          _handleSubmit();
+        }
       }
-    } else if (_currentPage == 1) {
-      _hasAttemptedStep2 = true;
-      if (_formData.isStep2Valid) {
-        _currentPage += (_formData.frequency == "I need more options...") ? 1 : 2;
+    });
+  }
+
+  void _previousPage() {
+    setState(() {
+      if (_navigationHistory.isNotEmpty) {
+        _currentPage =
+            _navigationHistory.removeLast(); // Go back to the last visited page
       }
-    } else if (_currentPage == 2) {
-      _currentPage++;
-    } else if (_currentPage == 3) {
-      _hasAttemptedStep3 = true;
-      if (_formData.isStep3Valid) {
-        _handleSubmit();
-      }
-    }
-  });
-}
-
-
-void _previousPage() {
-  setState(() {
-    if (_navigationHistory.isNotEmpty) {
-      _currentPage = _navigationHistory.removeLast(); // Go back to the last visited page
-    }
-  });
-}
-
-
+    });
+  }
 
   void _handleSubmit() {
     setState(() {

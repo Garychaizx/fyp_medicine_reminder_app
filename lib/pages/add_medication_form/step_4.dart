@@ -24,6 +24,18 @@ class _Step4State extends State<Step4> {
 
   @override
   Widget build(BuildContext context) {
+    bool isEveryXHours = widget.formData.frequency == "Every X Hours";
+    if (isEveryXHours) {
+      // Reset reminderTimes to prevent old values from being used
+      widget.formData.reminderTimes = <TimeOfDay>[];
+    } else {
+      // Ensure that previous reminderTimes exist for normal cases
+      widget.formData.reminderTimes ??= [];
+    }
+    // Ensure startingTime and endingTime exist in formData
+    widget.formData.startingTime ??= TimeOfDay.now();
+    widget.formData.endingTime ??= TimeOfDay.now();
+
     return SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -36,22 +48,51 @@ class _Step4State extends State<Step4> {
               fit: BoxFit.contain,
             ),
           ),
-          Column(
-  children: List.generate(
-    widget.formData.reminderTimes.length, // Dynamically generate inputs
-    (index) => ReminderTimePicker(
-      index: index,
-      time: widget.formData.reminderTimes[index],
-      hasAttempted: hasAttempted,
-      onSelect: (time) {
-        setState(() {
-          widget.formData.reminderTimes[index] = time; // Update selected time
-        });
-      },
-    ),
-  ),
-),
 
+          // If "Every X hours" frequency is selected, show Start & End Time pickers
+          if (isEveryXHours) ...[
+            ReminderTimePicker(
+              index: 0,
+              time: widget.formData.startingTime,
+              // label: "Starting Time",
+              hasAttempted: hasAttempted,
+              onSelect: (time) {
+                setState(() {
+                  widget.formData.startingTime = time;
+                });
+              },
+            ),
+            ReminderTimePicker(
+              index: 1,
+              time: widget.formData.endingTime,
+              // label: "Ending Time",
+              hasAttempted: hasAttempted,
+              onSelect: (time) {
+                setState(() {
+                  widget.formData.endingTime = time;
+                });
+              },
+            ),
+          ] else ...[
+            // Show normal reminder time pickers for other frequencies
+            Column(
+              children: List.generate(
+                widget.formData.reminderTimes.length,
+                (index) => ReminderTimePicker(
+                  index: index,
+                  time: widget.formData.reminderTimes[index],
+                  hasAttempted: hasAttempted,
+                  onSelect: (time) {
+                    setState(() {
+                      widget.formData.reminderTimes[index] = time;
+                    });
+                  },
+                ),
+              ),
+            ),
+          ],
+
+          // Dose Quantity Input
           CustomFormField(
             controller: widget.formData.doseQuantityController,
             label: 'Dose Quantity',
@@ -67,6 +108,8 @@ class _Step4State extends State<Step4> {
               });
             },
           ),
+
+          // Refill Reminder Toggle
           SwitchListTile(
             title: const Text('Refill Reminder'),
             value: widget.formData.refillReminderEnabled,
@@ -80,6 +123,8 @@ class _Step4State extends State<Step4> {
               });
             },
           ),
+
+          // Refill Reminder Options
           if (widget.formData.refillReminderEnabled) ...[
             CustomFormField(
               controller: widget.formData.refillThresholdController,
@@ -104,6 +149,8 @@ class _Step4State extends State<Step4> {
               },
             ),
           ],
+
+          // Submit & Back Buttons
           SizedBox(
             width: 380,
             child: Column(
@@ -113,6 +160,16 @@ class _Step4State extends State<Step4> {
                     setState(() {
                       hasAttempted = true;
                     });
+
+                    // Debug form data before submission
+                    print("Submitting form with data:");
+                    print("Frequency: ${widget.formData.frequency}");
+                    print("Reminder Times: ${widget.formData.reminderTimes}");
+                    print("Starting Time: ${widget.formData.startingTime}");
+                    print("Ending Time: ${widget.formData.endingTime}");
+                    print("Dose Quantity: ${widget.formData.doseQuantity}");
+                    print("Refill Reminder: ${widget.formData.refillReminderEnabled}");
+
                     widget.handleSubmit();
                   },
                   style: AppStyles.submitButtonStyle,

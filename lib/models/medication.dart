@@ -4,13 +4,16 @@ class Medication {
   final String name;
   final String unit;
   final String frequency;
-  final List<String> reminderTimes;
+   List<String> reminderTimes;
   final int doseQuantity;
   final int currentInventory;
   final String userUid;
   final bool refillReminderEnabled;
   final int? refillThreshold;
   final String? refillReminderTime;
+  final int? hourInterval;
+  final String? startingTime; // Add this
+  final String? endingTime; // Add this
 
   Medication({
     required this.name,
@@ -23,6 +26,9 @@ class Medication {
     required this.refillReminderEnabled,
     this.refillThreshold,
     this.refillReminderTime,
+    this.startingTime,
+    this.endingTime,
+    this.hourInterval,
   });
 
   Map<String, dynamic> toMap() {
@@ -37,6 +43,9 @@ class Medication {
       'refill_reminder_enabled': refillReminderEnabled,
       'refill_threshold': refillThreshold,
       'refill_reminder_time': refillReminderTime,
+      'interval_starting_time': startingTime,
+      'interval_ending_time': endingTime,
+      'interval_hour': hourInterval,
       'created_at': FieldValue.serverTimestamp(),
     };
   }

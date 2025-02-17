@@ -50,11 +50,11 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
             },
             calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: Colors.blueAccent,
+                color: Color(0xFF8B9EB7), // Using ARGB format in hex
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: Colors.orange,
+                color: Color.fromARGB(255, 11, 24, 66),
                 shape: BoxShape.circle,
               ),
             ),
@@ -64,7 +64,13 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
             padding: const EdgeInsets.symmetric(vertical: 4.0),
             child: Text(
               _getDayDescription(_focusedDay),
-              style: TextStyle(fontSize: 18, color: Colors.blue[800]),
+              style: const TextStyle(
+                fontSize: 20, // Increased font size
+                fontWeight: FontWeight.bold, // Bolder font weight
+                color: Color.fromARGB(255, 88, 88, 88), // Matched color
+                fontFamily: 'Roboto', // Optional: Set preferred font
+              ),
+              textAlign: TextAlign.center, // Optional: center alignment
             ),
           ),
           Divider(
@@ -107,6 +113,24 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
                           child: TimeHeader(time: time),
                         ),
                         ...meds.map((medication) {
+                          List<String> reminderTimes = List<String>.from(
+                              medication['reminder_times'] ?? []);
+
+                          // Check if medication follows "Every X Hours" pattern
+                          if (medication['frequency'] == 'Every X Hours' &&
+                              medication
+                                  .containsKey('interval_starting_time') &&
+                              medication.containsKey('interval_ending_time') &&
+                              medication.containsKey('interval_hour')) {
+                            // Dynamically calculate the reminder times
+                            reminderTimes =
+                                _medicationService.calculateHourlyReminderTimes(
+                              medication['interval_starting_time'],
+                              medication['interval_ending_time'],
+                              medication['interval_hour'],
+                            );
+                          }
+
                           return Padding(
                             padding: const EdgeInsets.only(
                                 bottom: 8.0), // Adds space below each card
@@ -116,8 +140,8 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
                               doseQuantity: medication['dose_quantity'] ?? 0,
                               medicationId: medication['id'],
                               selectedDay: _selectedDay,
-                              reminderTimes: List<String>.from(
-                                  medication['reminder_times'] ?? []),
+                              reminderTimes:
+                                  reminderTimes, // Updated reminder times
                             ),
                           );
                         }),
