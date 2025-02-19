@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:medicine_reminder/constants/styles.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/widgets/custom_dropdown.dart';
+// import 'package:medicine_reminder/widgets/custom_dropdown.dart';
 import 'package:medicine_reminder/widgets/custom_form_field.dart';
 // import 'package:medicine_reminder/services/notification_service.dart';
-import 'package:medicine_reminder/widgets/custom_text_field.dart';
+// import 'package:medicine_reminder/widgets/custom_text_field.dart';
 import 'package:medicine_reminder/widgets/reminder_time_picker.dart';
 
 // Constants for decorations
@@ -39,10 +40,18 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
   TimeOfDay? refillReminderTime;
   bool refillReminderEnabled = false;
   final _medicationService = MedicationService();
+  late TextEditingController startTimeController;
+  late TextEditingController endTimeController;
+  late TextEditingController intervalHoursController;
+  bool isEveryXHours = false;
+  TextEditingController numberOfRemindersController = TextEditingController();
+  String? _selectedNumberOfReminders;
+  final List<String> _numberOfRemindersOptions = ['4','5','6','7'];
 
   @override
   void initState() {
     super.initState();
+
     // Initialize controllers with existing data
     nameController = TextEditingController(text: widget.medicationData['name']);
     _frequency = widget.medicationData['frequency'];
@@ -51,36 +60,35 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     doseQuantityController = TextEditingController(
         text: widget.medicationData['dose_quantity']?.toString() ?? '');
 
+    // Initialize refill reminder fields OUTSIDE the loop
+    refillReminderEnabled =
+        widget.medicationData['refill_reminder_enabled'] ?? false;
+    refillThresholdController = TextEditingController(
+        text: widget.medicationData['refill_threshold']?.toString() ?? '');
+    String? storedTime = widget.medicationData['refill_reminder_time'];
+    refillReminderTime = storedTime != null ? _parseTime(storedTime) : null;
+
     // Set up reminder time controllers based on existing reminder times
     List<String> existingTimes =
-        List<String>.from(widget.medicationData['reminder_times'] ?? ['']);
+        List<String>.from(widget.medicationData['reminder_times'] ?? []);
+    if (existingTimes.isEmpty) {
+      existingTimes
+          .add(''); // Ensure there's at least one default empty controller
+    }
     for (String time in existingTimes) {
       reminderTimeControllers.add(TextEditingController(text: time));
-      // Initialize refill reminder fields
-      refillReminderEnabled =
-          widget.medicationData['refill_reminder_enabled'] ?? false;
-      refillThresholdController = TextEditingController(
-          text: widget.medicationData['refill_threshold']?.toString() ?? '');
-      String? storedTime = widget.medicationData['refill_reminder_time'];
-      refillReminderTime = storedTime != null ? _parseTime(storedTime) : null;
     }
-  }
 
-  void _updateReminderTimeFields() {
-    int reminderCount = _frequency == 'Twice a Day'
-        ? 2
-        : _frequency == 'Three Times a Day'
-            ? 3
-            : 1;
-
-    setState(() {
-      while (reminderTimeControllers.length < reminderCount) {
-        reminderTimeControllers.add(TextEditingController());
-      }
-      while (reminderTimeControllers.length > reminderCount) {
-        reminderTimeControllers.removeLast();
-      }
-    });
+    // Initialize interval-related controllers
+    startTimeController = TextEditingController(
+      text: widget.medicationData['interval_starting_time'] ?? '',
+    );
+    endTimeController = TextEditingController(
+      text: widget.medicationData['interval_ending_time'] ?? '',
+    );
+    intervalHoursController = TextEditingController(
+      text: widget.medicationData['interval_hour']?.toString() ?? '',
+    );
   }
 
   Future<void> _saveMedication() async {
@@ -97,7 +105,6 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     try {
       final updatedData = {
         'name': nameController.text,
-        'reminder_times': reminderTimeControllers.map((c) => c.text).toList(),
         'frequency': _frequency,
         'current_inventory': int.tryParse(currentInventoryController.text) ?? 0,
         'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
@@ -105,18 +112,41 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
         'refill_reminder_enabled': refillReminderEnabled,
         'refill_reminder_time': refillReminderTime != null
             ? _formatTime(refillReminderTime!)
-            : null, // Ensure it's saved in "6:38 PM" format
+            : null,
       };
+
+      await _medicationService.cancelReminders(widget.medicationId);
+
+      if (_frequency == "Every X Hours") {
+        updatedData['interval_starting_time'] = startTimeController.text;
+        updatedData['interval_ending_time'] = endTimeController.text;
+        updatedData['interval_hour'] =
+            int.tryParse(intervalHoursController.text) ?? 0;
+
+        await _medicationService.scheduleIntervalReminders(
+          medicationId: widget.medicationId,
+          medicationName: nameController.text,
+          startTime: startTimeController.text,
+          endTime: endTimeController.text,
+          intervalHours: int.tryParse(intervalHoursController.text) ?? 0,
+          doseQuantity: int.parse(doseQuantityController.text),
+          unit: widget.medicationData['unit'],
+        );
+      } else {
+        updatedData['reminder_times'] =
+            reminderTimeControllers.map((c) => c.text).toList();
+
+        _medicationService.scheduleReminders(
+          medicationId: widget.medicationId,
+          medicationName: nameController.text,
+          reminderTimes: reminderTimeControllers.map((c) => c.text).toList(),
+          doseQuantity: int.parse(doseQuantityController.text),
+          unit: widget.medicationData['unit'],
+        );
+      }
 
       await _medicationService.updateMedication(
           widget.medicationId, updatedData);
-      _medicationService.scheduleReminders(
-        medicationId: widget.medicationId,
-        medicationName: nameController.text,
-        reminderTimes: reminderTimeControllers.map((c) => c.text).toList(),
-        doseQuantity: int.parse(doseQuantityController.text),
-        unit: widget.medicationData['unit'],
-      );
       Navigator.pop(context);
     } catch (e) {
       debugPrint('Error saving medication: $e');
@@ -133,39 +163,73 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
   }
 
   String _formatTime(TimeOfDay time) {
-  final now = DateTime.now();
-  final dateTime = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-  return DateFormat.jm().format(dateTime); // Converts to "6:38 PM" format
-}
-
-
-TimeOfDay? _parseTime(String timeString) {
-  try {
-    // Normalize spaces (replace any non-breaking or narrow spaces with a standard space)
-    timeString = timeString.replaceAll(RegExp(r'\s+'), ' ').trim();
-    
-    print('Normalized Time String: $timeString'); // Debugging
-    
-    // Parse the time string into a TimeOfDay object
-    final parts = timeString.split(' ');
-    if (parts.length == 2) {
-      final timeParts = parts[0].split(':');
-      final hour = int.parse(timeParts[0]);
-      final minute = int.parse(timeParts[1].padLeft(2, '0'));
-      bool isPM = parts[1].toUpperCase() == 'PM';
-
-      // Convert to 24-hour format if necessary
-      final adjustedHour = isPM && hour != 12 ? hour + 12 : hour;
-      final finalHour = adjustedHour == 24 ? 0 : adjustedHour;
-
-      return TimeOfDay(hour: finalHour, minute: minute);
-    }
-  } catch (e) {
-    print('Error parsing time: $e');
+    final now = DateTime.now();
+    final dateTime =
+        DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    return DateFormat.jm().format(dateTime); // Converts to "6:38 PM" format
   }
-  return null;
-}
 
+  TimeOfDay? _parseTime(String timeString) {
+    try {
+      // Normalize spaces (replace any non-breaking or narrow spaces with a standard space)
+      timeString = timeString.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      print('Normalized Time String: $timeString'); // Debugging
+
+      // Parse the time string into a TimeOfDay object
+      final parts = timeString.split(' ');
+      if (parts.length == 2) {
+        final timeParts = parts[0].split(':');
+        final hour = int.parse(timeParts[0]);
+        final minute = int.parse(timeParts[1].padLeft(2, '0'));
+        bool isPM = parts[1].toUpperCase() == 'PM';
+
+        // Convert to 24-hour format if necessary
+        final adjustedHour = isPM && hour != 12 ? hour + 12 : hour;
+        final finalHour = adjustedHour == 24 ? 0 : adjustedHour;
+
+        return TimeOfDay(hour: finalHour, minute: minute);
+      }
+    } catch (e) {
+      print('Error parsing time: $e');
+    }
+    return null;
+  }
+
+  void _updateReminderControllers() {
+    switch (_frequency) {
+      case 'Once a Day':
+        reminderTimeControllers = [TextEditingController()];
+        break;
+      case 'Twice a Day':
+        reminderTimeControllers = [
+          TextEditingController(),
+          TextEditingController()
+        ];
+        break;
+      case 'Three Times a Day':
+        reminderTimeControllers = [
+          TextEditingController(),
+          TextEditingController(),
+          TextEditingController()
+        ];
+        break;
+      case 'Multiple times daily':
+        int numberOfReminders =
+            int.tryParse(_selectedNumberOfReminders ?? '4') ??
+                4; // Default to 4 if not selected
+        reminderTimeControllers = List.generate(
+            numberOfReminders, (index) => TextEditingController());
+        break;
+      case 'Every X Hours':
+        // Don't show reminder time pickers for this case as it has a different layout
+        reminderTimeControllers = [];
+        break;
+      default:
+        reminderTimeControllers = [];
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,48 +247,102 @@ TimeOfDay? _parseTime(String timeString) {
                   ? 'Required'
                   : null,
             ),
-
+            // Number of Reminders Dropdown (only for 'Multiple times daily')
+            if (_frequency == "Multiple times daily") ...[
+              CustomDropdown(
+                value: _selectedNumberOfReminders,
+                items: _numberOfRemindersOptions,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedNumberOfReminders = value;
+                    _updateReminderControllers();
+                  });
+                },
+                label: 'Number of Reminders',
+                errorText:
+                    _hasAttemptedSubmit && _selectedNumberOfReminders == null
+                        ? 'Required'
+                        : null,
+              ),
+            ],
             // Reminder Times
-            ...reminderTimeControllers.asMap().entries.map((entry) {
-              int index = entry.key;
-              TextEditingController controller = entry.value;
-              // Pass the controller's text as the time value
-              TimeOfDay? currentTime = _parseTime(controller.text);
+            if (_frequency != "Every X Hours") ...[
+              ...reminderTimeControllers.asMap().entries.map((entry) {
+                int index = entry.key;
+                TextEditingController controller = entry.value;
+                TimeOfDay? currentTime = _parseTime(controller.text);
 
-              return SizedBox(
-                width:
-                    double.infinity, // Ensures the widget takes up full width
-                child: ReminderTimePicker(
+                return ReminderTimePicker(
                   index: index,
-                  time: currentTime, // Pass the current time to the widget
-                  hasAttempted:
-                      _hasAttemptedSubmit, // If you want to show error state
+                  time: currentTime,
+                  hasAttempted: _hasAttemptedSubmit,
                   onSelect: (selectedTime) {
                     setState(() {
-                      controller.text = selectedTime?.format(context) ??
-                          ''; // Update controller text
+                      controller.text = selectedTime?.format(context) ?? '';
                     });
                   },
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ],
+
+            if (_frequency == "Every X Hours") ...[
+              ReminderTimePicker(
+                index: 0,
+                time: _parseTime(startTimeController.text),
+                hasAttempted: _hasAttemptedSubmit,
+                onSelect: (selectedTime) {
+                  setState(() {
+                    startTimeController.text =
+                        selectedTime?.format(context) ?? '';
+                  });
+                },
+              ),
+              
+              ReminderTimePicker(
+                index: 1,
+                time: _parseTime(endTimeController.text),
+                hasAttempted: _hasAttemptedSubmit,
+                onSelect: (selectedTime) {
+                  setState(() {
+                    endTimeController.text =
+                        selectedTime?.format(context) ?? '';
+                  });
+                },
+              ),
+              CustomFormField(
+                controller: intervalHoursController,
+                label: 'Interval (Hours)',
+                keyboardType: TextInputType.number,
+                errorText:
+                    _hasAttemptedSubmit && intervalHoursController.text.isEmpty
+                        ? 'Required'
+                        : null,
+              ),
+            ],
 
             // Frequency
             // const SizedBox(height: 16),
-            // CustomDropdown(
-            //   value: _frequency,
-            //   items: const ['Once a Day', 'Twice a Day', 'Three Times a Day'],
-            //   onChanged: (value) {
-            //     setState(() {
-            //       _frequency = value;
-            //       _updateReminderTimeFields();
-            //     });
-            //   },
-            //   label: 'Frequency',
-            //   errorText: _hasAttemptedSubmit && _frequency == null
-            //       ? 'Please select a frequency'
-            //       : null,
-            // ),
+            CustomDropdown(
+              value: _frequency,
+              items: const [
+                'Once a Day',
+                'Twice a Day',
+                'Three Times a Day',
+                'Multiple times daily',
+                'Every X Hours'
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _frequency = value;
+                  _updateReminderControllers();
+                  // _updateReminderTimeFields();
+                });
+              },
+              label: 'Frequency',
+              errorText: _hasAttemptedSubmit && _frequency == null
+                  ? 'Please select a frequency'
+                  : null,
+            ),
 
             // Current Inventory
             CustomFormField(

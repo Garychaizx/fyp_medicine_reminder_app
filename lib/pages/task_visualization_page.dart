@@ -103,26 +103,28 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
                   itemBuilder: (context, index) {
                     final time = sortedTimes[index];
                     final meds = groupedMedications[time]!;
-                    // print('Initial selected day: $_selectedDay');
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Show the time header
                         Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
+                          padding: const EdgeInsets.only(
+                              left: 16.0, top: 8.0, bottom: 4.0),
                           child: TimeHeader(time: time),
                         ),
-                        ...meds.map((medication) {
+
+                        // Only show medications that actually match this reminder time
+                        ...meds.where((medication) {
                           List<String> reminderTimes = List<String>.from(
                               medication['reminder_times'] ?? []);
 
-                          // Check if medication follows "Every X Hours" pattern
+                          // If "Every X Hours", dynamically calculate the reminder times
                           if (medication['frequency'] == 'Every X Hours' &&
                               medication
                                   .containsKey('interval_starting_time') &&
                               medication.containsKey('interval_ending_time') &&
                               medication.containsKey('interval_hour')) {
-                            // Dynamically calculate the reminder times
                             reminderTimes =
                                 _medicationService.calculateHourlyReminderTimes(
                               medication['interval_starting_time'],
@@ -131,17 +133,20 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
                             );
                           }
 
+                          return reminderTimes
+                              .contains(time); // Only show if it matches
+                        }).map((medication) {
                           return Padding(
-                            padding: const EdgeInsets.only(
-                                bottom: 8.0), // Adds space below each card
+                            padding: const EdgeInsets.only(bottom: 8.0),
                             child: MedicationCard(
                               name: medication['name'] ?? 'Unknown Medication',
                               unit: medication['unit'] ?? '',
                               doseQuantity: medication['dose_quantity'] ?? 0,
                               medicationId: medication['id'],
                               selectedDay: _selectedDay,
-                              reminderTimes:
-                                  reminderTimes, // Updated reminder times
+                              reminderTimes: [
+                                time
+                              ], // Only show the relevant reminder time
                             ),
                           );
                         }),
