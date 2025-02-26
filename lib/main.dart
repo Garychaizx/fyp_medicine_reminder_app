@@ -126,6 +126,9 @@ void main() async {
         ledColor: Colors.white,
         importance: NotificationImportance.High,
         channelShowBadge: true,
+        soundSource: 'resource://raw/alarm_sound',
+        playSound: true,
+        enableVibration: true,
       ),
           NotificationChannel(
       channelKey: 'refill_channel',

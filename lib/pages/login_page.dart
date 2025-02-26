@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:medicine_reminder/main.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/signup_page.dart';
 import 'package:medicine_reminder/services/auth_service.dart';
@@ -18,9 +19,10 @@ class _LoginPageState extends State<LoginPage> {
     final email = emailController.text;
     final password = passwordController.text;
     final user = await authService.logIn(email, password);
-
+  
     if (user != null) {
       // Navigate to the main app (e.g., Navbar)
+      await scheduleAllNotifications();
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (_) => Navbar()));
     } else {

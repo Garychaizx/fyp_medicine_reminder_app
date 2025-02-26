@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:medicine_reminder/constants/styles.dart';
@@ -31,6 +33,7 @@ class FormData {
   int? hourInterval; // Fix: Add this property
   TimeOfDay? startingTime;
   TimeOfDay? endingTime;
+  File? medicationImage;
 
   bool get isStep1Valid =>
       medicationNameController.text.isNotEmpty &&

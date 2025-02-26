@@ -158,11 +158,14 @@ class MedicationCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.medication,
-                    size: 40,
-                    color: Color.fromARGB(255, 27, 50, 126),
-                  ),
+            Container(
+              padding: const EdgeInsets.all(12), // Adjusted padding for the icon
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 101, 109, 123).withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.medication, size: 36, color: Color.fromARGB(255, 3, 3, 77)), // Changed icon color for better visibility
+            ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -175,7 +178,7 @@ class MedicationCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 4),
                         Text(
                           frequencyText, // Display the updated frequency text
                           style: TextStyle(color: Colors.grey[600]),
@@ -196,11 +199,12 @@ class MedicationCard extends StatelessWidget {
                 children: reminderTimes
                     .map((time) => Chip(
                           label: Text(time),
-                          backgroundColor: Colors.blue[100],
+                          backgroundColor: Color(0xFF8B9EB7),
+                          labelStyle: TextStyle(fontWeight: FontWeight.bold,fontSize: 14,color:Colors.black),
                         ))
                     .toList(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [

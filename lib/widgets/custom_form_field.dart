@@ -7,6 +7,7 @@ class CustomFormField extends StatelessWidget {
   final String? errorText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final bool obscureText; // 🔹 Add this parameter
 
   const CustomFormField({
     Key? key,
@@ -15,6 +16,7 @@ class CustomFormField extends StatelessWidget {
     this.errorText,
     this.keyboardType,
     this.onChanged,
+    this.obscureText = false, // 🔹 Default to false (for normal fields)
   }) : super(key: key);
 
   @override
@@ -24,6 +26,7 @@ class CustomFormField extends StatelessWidget {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
+        obscureText: obscureText, // 🔹 Use it here
         onChanged: onChanged,
         decoration: AppStyles.getInputDecoration(label, errorText),
       ),

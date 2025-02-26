@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart';
+import 'package:medicine_reminder/pages/change_password_page.dart';
+import 'package:medicine_reminder/pages/nearby_pharmacy_page.dart'; // For date formatting
 
 class ProfilePage extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -30,17 +32,19 @@ class ProfilePage extends StatelessWidget {
           children: [
             // Profile Header
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor: Colors.deepPurple.shade100,
+                      backgroundColor: Color(0xFF8B9EB7),
                       child: Text(
                         userData['name'][0].toUpperCase(),
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -49,9 +53,11 @@ class ProfilePage extends StatelessWidget {
                       children: [
                         Text(
                           userData['name'],
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                        Text(userData['email'], style: const TextStyle(color: Colors.grey)),
+                        Text(userData['email'],
+                            style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -67,14 +73,17 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ListTile(
-              leading: const Icon(Icons.calendar_today, color: Colors.deepPurple),
+              leading: const Icon(Icons.calendar_today,
+                  color: Color.fromARGB(255, 3, 3, 77)),
               title: const Text('Age'),
               subtitle: Text(userData['age'].toString()),
             ),
             ListTile(
-              leading: const Icon(Icons.date_range, color: Colors.deepPurple),
+              leading: const Icon(Icons.date_range,
+                  color: Color.fromARGB(255, 3, 3, 77)),
               title: const Text('Created At'),
-              subtitle: Text(formatTimestamp(userData['created_at'])), // Use formatted timestamp
+              subtitle: Text(formatTimestamp(
+                  userData['created_at'])), // Use formatted timestamp
             ),
 
             const SizedBox(height: 20),
@@ -85,12 +94,28 @@ class ProfilePage extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             ListTile(
-              leading: const Icon(Icons.lock, color: Colors.deepPurple),
+              leading:
+                  const Icon(Icons.lock, color: Color.fromARGB(255, 3, 3, 77)),
               title: const Text('Password & Security'),
               onTap: () {
-                // Navigate to Password Settings
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ChangePasswordPage()),
+                );
               },
             ),
+            // ListTile(
+            //   leading: const Icon(Icons.local_pharmacy,
+            //       color: Color.fromARGB(255, 3, 3, 77)),
+            //   title: const Text('Find Nearest Pharmacy'),
+            //   onTap: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => NearbyPharmacyPage()),
+            //     );
+            //   },
+            // ),
+
             // ListTile(
             //   leading: const Icon(Icons.notifications, color: Colors.deepPurple),
             //   title: const Text('Notification Preferences'),
@@ -98,13 +123,13 @@ class ProfilePage extends StatelessWidget {
             //     // Navigate to Notification Settings
             //   },
             // ),
-            ListTile(
-              leading: const Icon(Icons.help, color: Colors.deepPurple),
-              title: const Text('FAQ'),
-              onTap: () {
-                // Navigate to FAQ Page
-              },
-            ),
+            // ListTile(
+            //   leading: const Icon(Icons.help, color: Colors.deepPurple),
+            //   title: const Text('FAQ'),
+            //   onTap: () {
+            //     // Navigate to FAQ Page
+            //   },
+            // ),
           ],
         ),
       ),

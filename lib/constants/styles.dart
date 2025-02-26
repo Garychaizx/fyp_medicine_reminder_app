@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppStyles {
   static const double padding = 15.0;
   static const double borderRadius = 12.0;
-  static const primaryColor = Color.fromARGB(255, 27, 50, 126);
+  static const primaryColor = Color.fromARGB(255, 11, 24, 66);
   
   static InputDecoration getInputDecoration(String label, String? errorText) {
     return InputDecoration(

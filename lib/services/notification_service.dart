@@ -64,8 +64,8 @@ class NotificationService {
           category: NotificationCategory.Reminder,
           wakeUpScreen: true,
           payload: {'medicationId': medicationId},
-          // customSound: 'assets/alarm_sound.mp3', // Replace with your custom sound file path
-          duration: const Duration(seconds: 5), // Set the duration of the sound
+          // // customSound: 'assets/alarm_sound.mp3', // Replace with your custom sound file path
+          // duration: const Duration(seconds: 5), // Set the duration of the sound
         ),
         actionButtons: [
           NotificationActionButton(

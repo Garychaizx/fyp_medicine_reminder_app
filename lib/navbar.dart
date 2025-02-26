@@ -83,6 +83,7 @@ appBar: AppBar(
     IconButton(
       icon: const Icon(Icons.logout),
       onPressed: () => handleLogout(context),
+      color: Colors.white,
     ),
   ],
   backgroundColor: const Color.fromARGB(255, 2, 3, 47),
