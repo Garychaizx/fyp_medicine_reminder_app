@@ -2,17 +2,17 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:medicine_reminder/constants/styles.dart';
+// import 'package:medicine_reminder/constants/styles.dart';
 import 'package:medicine_reminder/models/medication.dart';
 import 'package:medicine_reminder/pages/add_medication_form/step_1.dart';
 import 'package:medicine_reminder/pages/add_medication_form/step_2.dart';
 import 'package:medicine_reminder/pages/add_medication_form/step_3.dart';
 import 'package:medicine_reminder/pages/add_medication_form/step_4.dart';
 import 'package:medicine_reminder/services/medication_service.dart'; // Adjust the import based on your project structure
-import 'package:medicine_reminder/widgets/custom_form_field.dart'; // Adjust the import based on your project structure
-import 'package:medicine_reminder/widgets/custom_dropdown.dart'; // Adjust the import based on your project structure
-import 'package:medicine_reminder/widgets/reminder_time_picker.dart'; // Adjust the import based on your project structure
-import 'package:medicine_reminder/widgets/frequency_options.dart'; // Adjust the import based on your project structure
+// import 'package:medicine_reminder/widgets/custom_form_field.dart'; // Adjust the import based on your project structure
+// import 'package:medicine_reminder/widgets/custom_dropdown.dart'; // Adjust the import based on your project structure
+// import 'package:medicine_reminder/widgets/reminder_time_picker.dart'; // Adjust the import based on your project structure
+// import 'package:medicine_reminder/widgets/frequency_options.dart'; // Adjust the import based on your project structure
 // import 'package:medicine_reminder/styles/app_styles.dart'; // Adjust the import based on your project structure
 
 class FormData {
@@ -34,6 +34,7 @@ class FormData {
   TimeOfDay? startingTime;
   TimeOfDay? endingTime;
   File? medicationImage;
+  String? imageBase64;
 
   bool get isStep1Valid =>
       medicationNameController.text.isNotEmpty &&
@@ -103,6 +104,7 @@ class FormData {
       startingTime: startingTime?.format(context), // Convert TimeOfDay to String
       endingTime: endingTime?.format(context), // Convert TimeOfDay to String
       hourInterval: hourInterval,
+      imageBase64: imageBase64,
     );
   }
 }

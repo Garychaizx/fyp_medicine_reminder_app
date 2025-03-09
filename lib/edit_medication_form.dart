@@ -1,5 +1,10 @@
 // import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:medicine_reminder/constants/styles.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
@@ -9,6 +14,7 @@ import 'package:medicine_reminder/widgets/custom_form_field.dart';
 // import 'package:medicine_reminder/services/notification_service.dart';
 // import 'package:medicine_reminder/widgets/custom_text_field.dart';
 import 'package:medicine_reminder/widgets/reminder_time_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 // Constants for decorations
 const double _padding = 20.0;
@@ -46,7 +52,10 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
   bool isEveryXHours = false;
   TextEditingController numberOfRemindersController = TextEditingController();
   String? _selectedNumberOfReminders;
-  final List<String> _numberOfRemindersOptions = ['4','5','6','7'];
+  final List<String> _numberOfRemindersOptions = ['4', '5', '6', '7'];
+  final ImagePicker _picker = ImagePicker();
+  File? medicationImage;
+  String? imageBase64;
 
   @override
   void initState() {
@@ -78,7 +87,10 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     for (String time in existingTimes) {
       reminderTimeControllers.add(TextEditingController(text: time));
     }
-
+    if (widget.medicationData['imageBase64'] != null) {
+      imageBase64 = widget.medicationData['imageBase64'];
+      _loadImage(); // Call the function properly
+    }
     // Initialize interval-related controllers
     startTimeController = TextEditingController(
       text: widget.medicationData['interval_starting_time'] ?? '',
@@ -89,6 +101,52 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     intervalHoursController = TextEditingController(
       text: widget.medicationData['interval_hour']?.toString() ?? '',
     );
+  }
+
+// Function to decode base64 and convert it into a file
+  Future<void> _loadImage() async {
+    if (imageBase64 != null) {
+      await _loadImageFromBase64(imageBase64!);
+    }
+  }
+
+  Future<void> _loadImageFromBase64(String base64String) async {
+    Uint8List imageBytes = base64Decode(base64String);
+
+    // Create a unique filename every time
+    Directory tempDir = await getTemporaryDirectory();
+    String uniqueFileName = '${DateTime.now().millisecondsSinceEpoch}.png';
+    File imageFile = File('${tempDir.path}/$uniqueFileName');
+
+    // Write the image to a new file
+    await imageFile.writeAsBytes(imageBytes);
+
+    setState(() {
+      medicationImage = imageFile; // Update the UI with the new image
+    });
+  }
+
+  bool _isPickingImage = false; // Track if image picker is in use
+
+  Future<void> _pickImage() async {
+    if (_isPickingImage) return; // Prevent multiple taps
+    _isPickingImage = true; // Mark picker as active
+
+    try {
+      final XFile? pickedFile =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+
+      if (pickedFile != null) {
+        setState(() {
+          medicationImage = File(pickedFile.path);
+          imageBase64 = base64Encode(medicationImage!.readAsBytesSync());
+        });
+      }
+    } catch (e) {
+      print("Error picking image: $e");
+    } finally {
+      _isPickingImage = false; // Reset flag after picking
+    }
   }
 
   Future<void> _saveMedication() async {
@@ -110,6 +168,7 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
         'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
         'refill_threshold': int.tryParse(refillThresholdController.text) ?? 0,
         'refill_reminder_enabled': refillReminderEnabled,
+        'imageBase64': imageBase64,
         'refill_reminder_time': refillReminderTime != null
             ? _formatTime(refillReminderTime!)
             : null,
@@ -239,12 +298,104 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
         // padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            Column(
+              children: [
+                // const Text(
+                //   'Medication Photo (Optional)',
+                //   style: TextStyle(fontSize: 16),
+                // ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _pickImage, // Function to pick an image
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade200,
+                    ),
+                    child: medicationImage != null
+                        ? Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  medicationImage!,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      medicationImage = null;
+                                      imageBase64 = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                    ),
+                                    child: const Icon(Icons.cancel,
+                                        color: Colors.red, size: 20),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.photo_camera,
+                                  size: 40, color: Colors.grey),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Tap to upload",
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             // Medication Name
             CustomFormField(
               controller: nameController,
               label: 'Medication Name',
               errorText: _hasAttemptedSubmit && nameController.text.isEmpty
                   ? 'Required'
+                  : null,
+            ),
+            // Frequency
+            // const SizedBox(height: 16),
+            CustomDropdown(
+              value: _frequency,
+              items: const [
+                'Once a Day',
+                'Twice a Day',
+                'Three Times a Day',
+                'Multiple times daily',
+                'Every X Hours'
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _frequency = value;
+                  _updateReminderControllers();
+                  // _updateReminderTimeFields();
+                });
+              },
+              label: 'Frequency',
+              errorText: _hasAttemptedSubmit && _frequency == null
+                  ? 'Please select a frequency'
                   : null,
             ),
             // Number of Reminders Dropdown (only for 'Multiple times daily')
@@ -297,7 +448,6 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
                   });
                 },
               ),
-              
               ReminderTimePicker(
                 index: 1,
                 time: _parseTime(endTimeController.text),
@@ -319,31 +469,6 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
                         : null,
               ),
             ],
-
-            // Frequency
-            // const SizedBox(height: 16),
-            CustomDropdown(
-              value: _frequency,
-              items: const [
-                'Once a Day',
-                'Twice a Day',
-                'Three Times a Day',
-                'Multiple times daily',
-                'Every X Hours'
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _frequency = value;
-                  _updateReminderControllers();
-                  // _updateReminderTimeFields();
-                });
-              },
-              label: 'Frequency',
-              errorText: _hasAttemptedSubmit && _frequency == null
-                  ? 'Please select a frequency'
-                  : null,
-            ),
-
             // Current Inventory
             CustomFormField(
               controller: currentInventoryController,

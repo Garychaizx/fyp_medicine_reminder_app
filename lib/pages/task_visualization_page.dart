@@ -147,6 +147,7 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
                               reminderTimes: [
                                 time
                               ], // Only show the relevant reminder time
+                              imageBase64:medication['imageBase64'],
                             ),
                           );
                         }),

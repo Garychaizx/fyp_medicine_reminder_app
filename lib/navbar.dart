@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
 import 'package:medicine_reminder/pages/medications_page.dart';
+import 'package:medicine_reminder/pages/nearby_pharmacy_page.dart';
 import 'package:medicine_reminder/pages/profile_page.dart';
 import 'package:medicine_reminder/pages/task_visualization_page.dart';
 import 'package:medicine_reminder/services/auth_service.dart';
@@ -42,7 +43,7 @@ class _NavBarState extends State<Navbar> {
     // Replace with your home page
     TaskVisualizationPage(),
     // Replace with your updates page
-    const Text('Updates Page'),
+    NearbyPharmacyPage(),
     // The new medications page
     MedicationsPage(),
     // Replace with your manage page
@@ -62,7 +63,7 @@ class _NavBarState extends State<Navbar> {
 
     final List<String> _titles = [
     'Home',
-    'Updates',
+    'Pharmacies nearby',
     'Medications',
     'Profile',
   ];

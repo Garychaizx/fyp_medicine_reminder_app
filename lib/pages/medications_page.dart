@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:medicine_reminder/add_medication_form.dart';
-import 'package:medicine_reminder/constants/styles.dart';
 import 'package:medicine_reminder/edit_medication_form.dart';
-import 'package:medicine_reminder/services/medication_service.dart';
-// import 'add_medication_form.dart';
-// import 'edit_medication_form.dart';
+import 'package:medicine_reminder/widgets/medication_details_card.dart';
+import '../widgets/medication_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/add_medication_button.dart';
 
 class MedicationsPage extends StatelessWidget {
   const MedicationsPage({super.key});
@@ -16,9 +15,7 @@ class MedicationsPage extends StatelessWidget {
     User? currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
-      return const Center(
-        child: Text('Error: User not logged in'),
-      );
+      return const Center(child: Text('Error: User not logged in'));
     }
 
     return Scaffold(
@@ -37,7 +34,7 @@ class MedicationsPage extends StatelessWidget {
 
           return Column(
             children: [
-              if (!hasMedications) const _EmptyState(),
+              if (!hasMedications) const EmptyState(),
               if (hasMedications)
                 Expanded(
                   child: ListView.builder(
@@ -46,7 +43,7 @@ class MedicationsPage extends StatelessWidget {
                       var medication = snapshot.data!.docs[index].data();
                       var medicationId = snapshot.data!.docs[index].id;
 
-                      return MedicationCard(
+                      return MedicationDetailsCard(
                         medication: medication,
                         medicationId: medicationId,
                         onEdit: () {
@@ -64,200 +61,10 @@ class MedicationsPage extends StatelessWidget {
                     },
                   ),
                 ),
-              _AddMedicationButton(),
+              const AddMedicationButton(),
             ],
           );
         },
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey[200],
-            ),
-            child: ClipOval(
-              child: Image.asset(
-                'assets/giphy.gif',
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Manage Your Meds',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const Text(
-            'Add your meds to be reminded on time \nand track your health',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color.fromARGB(255, 150, 145, 145)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MedicationCard extends StatelessWidget {
-  final Map<String, dynamic> medication;
-  final String medicationId;
-  final VoidCallback onEdit;
-
-  const MedicationCard({
-    required this.medication,
-    required this.medicationId,
-    required this.onEdit,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    // Only call calculateHourlyReminderTimes for "Every X Hours" frequency
-    List<String> reminderTimes = [];
-    String frequencyText = medication['frequency'] ?? 'No Frequency';
-
-    if (frequencyText == 'Every X Hours' &&
-        medication['interval_hour'] != null) {
-      // Replace 'X' with the interval hour value
-      frequencyText = 'Every ${medication['interval_hour']} Hours';
-      final MedicationService _medicationService = MedicationService();
-      // Calculate reminder times using the interval_hour
-      reminderTimes = _medicationService.calculateHourlyReminderTimes(
-        medication['interval_starting_time'],
-        medication['interval_ending_time'],
-        medication['interval_hour'],
-      );
-    } else {
-      // Handle other frequencies if needed (or leave as empty list)
-      reminderTimes = List<String>.from(medication['reminder_times'] ?? []);
-    }
-
-    return InkWell(
-      onTap: onEdit,
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-            Container(
-              padding: const EdgeInsets.all(12), // Adjusted padding for the icon
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 101, 109, 123).withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.medication, size: 36, color: Color.fromARGB(255, 3, 3, 77)), // Changed icon color for better visibility
-            ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          medication['name'] ?? 'No Name',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          frequencyText, // Display the updated frequency text
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Reminder Time(s):',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8.0,
-                children: reminderTimes
-                    .map((time) => Chip(
-                          label: Text(time),
-                          backgroundColor: Color(0xFF8B9EB7),
-                          labelStyle: TextStyle(fontWeight: FontWeight.bold,fontSize: 14,color:Colors.black),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Current Inventory',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${medication['current_inventory']} ${medication['unit']}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddMedicationButton extends StatelessWidget {
-  const _AddMedicationButton({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddMedicationForm(
-                  medicationService: MedicationService(),
-                ),
-              ),
-            );
-          },
-          style: AppStyles.primaryButtonStyle,
-          child: const Text('Add Medication'),
-        ),
       ),
     );
   }

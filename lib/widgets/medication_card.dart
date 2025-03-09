@@ -1,9 +1,13 @@
+import 'dart:convert';
+import 'dart:ui';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
-import 'package:intl/intl.dart'; // For formatting timestamps
+import 'package:intl/intl.dart';
+import 'package:medicine_reminder/utils/dialog_helper.dart'; // For formatting timestamps
 
 class MedicationCard extends StatefulWidget {
   final String name;
@@ -12,6 +16,7 @@ class MedicationCard extends StatefulWidget {
   final List<String> reminderTimes;
   final String medicationId;
   final DateTime selectedDay;
+  final String? imageBase64;
 
   const MedicationCard({
     Key? key,
@@ -21,6 +26,7 @@ class MedicationCard extends StatefulWidget {
     required this.reminderTimes,
     required this.selectedDay,
     required this.medicationId,
+    this.imageBase64,
   }) : super(key: key);
 
   @override
@@ -60,106 +66,284 @@ class _MedicationCardState extends State<MedicationCard> {
     }
   }
 
+  void _showActionSheet(BuildContext context, String reminderTime) {
+    showDialog(
+      context: context,
+      barrierDismissible: true, // Enables dismissing by tapping outside
+      builder: (BuildContext context) {
+        return GestureDetector(
+          onTap: () =>
+              Navigator.pop(context), // Close the dialog when tapping outside
+          behavior: HitTestBehavior
+              .opaque, // Ensures taps outside the dialog are detected
+          child: Stack(
+            children: [
+              // Blurred background effect
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(color: Colors.black.withOpacity(0.3)),
+                ),
+              ),
+              Center(
+                child: GestureDetector(
+                  onTap:
+                      () {}, // Prevents taps on the dialog itself from closing it
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.9, end: 1.0).animate(
+                      CurvedAnimation(
+                          parent: ModalRoute.of(context)!.animation!,
+                          curve: Curves.easeOut),
+                    ),
+                    child: Dialog(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      elevation: 10,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 40, horizontal: 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            widget.imageBase64 != null &&
+                                    widget.imageBase64!.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: Image.memory(
+                                      base64Decode(widget.imageBase64!),
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : const Icon(Icons.medication,
+                                    size: 50,
+                                    color: Color.fromARGB(255, 3, 3, 77)),
+                            const SizedBox(height: 10),
+                            const SizedBox(height: 10),
+                            Text(widget.name,
+                                style: const TextStyle(
+                                    fontSize: 22, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 10),
+                            Text('Take ${widget.doseQuantity} ${widget.unit}',
+                                style: TextStyle(
+                                    fontSize: 16, color: Colors.grey[700])),
+                            const SizedBox(height: 20),
+
+                            // Buttons for "Taken" and "Miss"
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Icon(Icons.close, color: Colors.grey[400]), // Cross icon
+                                    // Icon(Icons.check, color: Colors.grey[400]), // Tick icon
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        await _markAsTaken(reminderTime);
+                                        Navigator.pop(context);
+                                      },
+                                      icon: const Icon(Icons.check,
+                                          color: Colors
+                                              .black), // Tick icon for the button
+                                      label: const Text("Taken",
+                                          style:
+                                              TextStyle(color: Colors.black)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors
+                                            .transparent, // Remove background color
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 20, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          side: BorderSide(
+                                              color: Colors
+                                                  .grey[400]!), // Add a border
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // ElevatedButton.icon(
+                                //   onPressed: () => Navigator.pop(context),
+                                //   icon: const Icon(Icons.close,
+                                //       color: Colors
+                                //           .black), // Cross icon for the button
+                                //   label: const Text("Miss",
+                                //       style: TextStyle(color: Colors.black)),
+                                //   style: ElevatedButton.styleFrom(
+                                //     backgroundColor: Colors
+                                //         .transparent, // Remove background color
+                                //     padding: const EdgeInsets.symmetric(
+                                //         horizontal: 20, vertical: 12),
+                                //     shape: RoundedRectangleBorder(
+                                //       borderRadius: BorderRadius.circular(12),
+                                //       side: BorderSide(
+                                //           color: Colors
+                                //               .grey[400]!), // Add a border
+                                //     ),
+                                //   ),
+                                // ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _markAsTaken(String reminderTime) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final medicationService = MedicationService();
+    await medicationService.updateInventory(
+        widget.medicationId, widget.doseQuantity);
+    await medicationService.logAdherence(
+      currentUser.uid,
+      widget.medicationId,
+      widget.name,
+      widget.doseQuantity,
+      widget.selectedDay,
+      reminderTime,
+    );
+
+    await _fetchTakenAtForReminders();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text('${widget.name} marked as taken at $reminderTime')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    User? currentUser = FirebaseAuth.instance.currentUser;
-
     return Column(
       children: widget.reminderTimes.map((reminderTime) {
         final takenAt = takenAtMap[reminderTime];
 
-  return Card(
-  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 26),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-  ),
-  elevation: 4,
-  child: Padding(
-    padding: const EdgeInsets.all(16), // Increased padding for better spacing
-    child: Row(
-      children: [
-        // Medication Icon with a tick if taken
-        Stack(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12), // Adjusted padding for the icon
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 101, 109, 123).withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.medication, size: 36, color: Color.fromARGB(255, 3, 3, 77)), // Changed icon color for better visibility
+        return GestureDetector(
+          onTap: () => _showActionSheet(context, reminderTime),
+          child: Card(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 26),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-            if (takenAt != null)
-              const Positioned(
-                right: -1,
-                top: -1,
-                child: Icon(Icons.check_circle, color: Color.fromARGB(255, 9, 91, 11), size: 20), // Increased size for better visibility
-              ),
-          ],
-        ),
-        const SizedBox(width: 16),
-
-                // Medication Details
-                Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.name,
-                style: const TextStyle(
-                  fontSize: 20, // Increased font size for the medication name
-                  fontWeight: FontWeight.bold, // Changed to bold for emphasis
-                  color: Colors.black, // Changed color for better contrast
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Take ${widget.doseQuantity} ${widget.unit}',
-                style: TextStyle(
-                  fontSize: 16, // Adjusted font size for dosage
-                  color: Colors.grey[700], // Changed color for better readability
-                ),
-              ),
-              if (takenAt != null)
-                Text(
-                  'Taken at $takenAt',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color.fromARGB(255, 14, 90, 17),
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
+            elevation: 4,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none, // Allow tick to go outside
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color.fromARGB(255, 227, 227, 227),
+                            width: 2,
+                          ),
+                          color: (widget.imageBase64 != null &&
+                                  widget.imageBase64!.isNotEmpty)
+                              ? Colors.transparent
+                              : const Color.fromARGB(255, 101, 109, 123)
+                                  .withOpacity(0.2),
+                        ),
+                        child: GestureDetector(
+                          onTap: () {
+                            if (widget.imageBase64 != null &&
+                                widget.imageBase64!.isNotEmpty) {
+                              showImageDialog(context, widget.imageBase64!);
+                            }
+                          },
+                          child: widget.imageBase64 != null &&
+                                  widget.imageBase64!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                      12), // Match the border radius
+                                  child: Image.memory(
+                                    base64Decode(widget.imageBase64!),
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.medication,
+                                  size: 36,
+                                  color: Color.fromARGB(255, 3, 3, 77),
+                                ),
+                        ),
+                      ),
+                      // ✅ Adjusted tick position
+                      if (takenAt != null)
+                        Positioned(
+                          right: -5,
+                          top: -5,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color.fromARGB(255, 227, 227, 227), // Background for better contrast
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_circle,
+                              color: Color.fromARGB(255, 45, 174, 49),
+                              size: 18, // Bigger for better visibility
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                ),
-
-                // Taken Button
-                TextButton(
-                  onPressed: takenAt != null
-                      ? null // Disable if already taken
-                      : () async {
-                          if (currentUser == null) return;
-
-                          final medicationService = MedicationService();
-                          await medicationService.updateInventory(widget.medicationId, widget.doseQuantity);
-                          await medicationService.logAdherence(
-                            currentUser.uid,
-                             widget.medicationId,
-                            widget.name,
-                            widget.doseQuantity,widget.selectedDay,
-                            reminderTime, // Pass specific reminder
-                            
-                          );
-
-                          await _fetchTakenAtForReminders(); // Refresh after logging
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('${widget.name} marked as taken at $reminderTime')),
-                          );
-                        },
-                  child: Text(takenAt != null ? 'Taken' : 'Mark as Taken'),
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Take ${widget.doseQuantity} ${widget.unit}',
+                          style:
+                              TextStyle(fontSize: 16, color: Colors.grey[700]),
+                        ),
+                        if (takenAt != null)
+                          Text(
+                            'Taken at $takenAt',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color.fromARGB(255, 14, 90, 17),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -167,6 +351,7 @@ class _MedicationCardState extends State<MedicationCard> {
     );
   }
 }
+
 
 
 

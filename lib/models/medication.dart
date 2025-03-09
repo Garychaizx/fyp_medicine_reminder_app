@@ -14,6 +14,7 @@ class Medication {
   final int? hourInterval;
   final String? startingTime; // Add this
   final String? endingTime; // Add this
+  final String? imageBase64;
 
   Medication({
     required this.name,
@@ -29,6 +30,7 @@ class Medication {
     this.startingTime,
     this.endingTime,
     this.hourInterval,
+    this.imageBase64,
   });
 
   Map<String, dynamic> toMap() {
@@ -47,6 +49,7 @@ class Medication {
       'interval_ending_time': endingTime,
       'interval_hour': hourInterval,
       'created_at': FieldValue.serverTimestamp(),
+      'imageBase64': imageBase64,
     };
   }
 }
