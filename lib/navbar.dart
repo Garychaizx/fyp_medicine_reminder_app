@@ -77,43 +77,43 @@ appBar: AppBar(
     style: TextStyle(
       fontSize: 20,  // Adjust font size as needed
       fontWeight: FontWeight.bold, // Make it bold
-      color: Colors.white, // Change color to white
+      color: Colors.black, // Change color to white
     ),
   ),
   actions: [
     IconButton(
       icon: const Icon(Icons.logout),
       onPressed: () => handleLogout(context),
-      color: Colors.white,
+      color: Colors.black,
     ),
   ],
-  backgroundColor: const Color.fromARGB(255, 2, 3, 47),
+  backgroundColor: const Color(0xFFF8F4F1),
 ),
       body: _pages[_currentIndex],
       bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 0.0),
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
         child: GNav(
-          backgroundColor: Colors.black,
-          color: Colors.white,
-          activeColor: Colors.white,
+          backgroundColor: Colors.white,
+          color: Colors.black45,
+          activeColor: Colors.red[600],
           tabBackgroundColor: const Color.fromARGB(66, 150, 147, 147),
           gap: 8,
           padding: const EdgeInsets.all(16),
           tabs: const [
             GButton(
-              icon: Icons.home,
+              icon: Icons.house_outlined,
               text: 'Home',
             ),
             GButton(
-              icon: Icons.tips_and_updates,
-              text: 'Updates',
+              icon: Icons.medical_services_outlined,
+              text: 'Pharmacies',
             ),
             GButton(
-              icon: Icons.medication,
+              icon: Icons.medication_liquid_sharp,
               text: 'Medications',
             ),
             GButton(
-              icon: Icons.format_list_bulleted,
+              icon: Icons.person_2_outlined,
               text: 'Profile',
             ),
           ],

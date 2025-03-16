@@ -43,7 +43,7 @@ class _Step4State extends State<Step4> {
           Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Image.asset(
-              'assets/medication.png',
+              'assets/step4.png',
               height: 150,
               fit: BoxFit.contain,
             ),
@@ -173,7 +173,7 @@ class _Step4State extends State<Step4> {
                     widget.handleSubmit();
                   },
                   style: AppStyles.submitButtonStyle,
-                  child: const Text('Submit'),
+                  child: const Text('Save'),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(

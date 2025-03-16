@@ -19,6 +19,7 @@ class MedicationsPage extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F4F1),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance
             .collection('medications')

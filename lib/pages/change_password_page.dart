@@ -97,17 +97,18 @@ Future<void> _changePassword() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F4F1),
       appBar: AppBar(
         title: const Text(
           "Change Password",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Colors.black,
           ),
         ),
-        backgroundColor: const Color.fromARGB(255, 2, 3, 47),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFFF8F4F1),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

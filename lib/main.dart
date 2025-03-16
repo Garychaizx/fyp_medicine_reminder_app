@@ -7,6 +7,7 @@ import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -108,6 +109,9 @@ void main() async {
   // Initialize Firebase
   await Firebase.initializeApp();
   print('Firebase initialized.');
+
+  await dotenv.load(fileName: ".env");
+  print("API Key Loaded: ${dotenv.env['GOOGLE_MAPS_API_KEY'] ?? 'NOT FOUND'}");
 
   // Initialize NotificationService
   NotificationService notificationService = NotificationService();

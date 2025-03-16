@@ -55,6 +55,7 @@ dependencies:
   image_picker: ^1.1.2
   firebase_storage: ^12.4.4
   path_provider: ^2.1.5
+  flutter_dotenv: ^5.2.1
 
 
   # google_maps_flutter: 2.10.0
@@ -90,8 +91,13 @@ flutter:
   assets:
     - assets/logo.png
     - assets/giphy.gif
-    - assets/medication.png
+    - assets/step1.png
+    - assets/step2.png
+    - assets/step3.png
+    - assets/step4.png
+    - assets/pill.png
     - assets/alarm_sound.mp3
+    - .env
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

@@ -30,8 +30,8 @@ class AppStyles {
 
   static ButtonStyle primaryButtonStyle = ElevatedButton.styleFrom(
     minimumSize: const Size(400, 40),
-    backgroundColor: primaryColor,
-    foregroundColor: Colors.white,
+    backgroundColor: Color.fromARGB(255, 56, 26, 3),
+    foregroundColor: Color(0xFFF8F4F1),
     padding: const EdgeInsets.symmetric(vertical: 15.0),
     textStyle: const TextStyle(
     fontSize: 18,
@@ -41,8 +41,8 @@ class AppStyles {
 
   static ButtonStyle secondaryButtonStyle = ElevatedButton.styleFrom(
     minimumSize: const Size(400, 40),
-    backgroundColor: Colors.blueGrey.shade200,
-    foregroundColor: Colors.white,
+    backgroundColor: const Color.fromARGB(255, 255, 234, 219),
+    foregroundColor: Color.fromARGB(255, 56, 26, 3),
     padding: const EdgeInsets.symmetric(vertical: 15.0),
     textStyle: const TextStyle(
       fontSize: 18,
@@ -52,7 +52,7 @@ class AppStyles {
   
   static ButtonStyle deleteButtonStyle = ElevatedButton.styleFrom(
     minimumSize: const Size(400, 40),
-    backgroundColor: Colors.red[300],
+    backgroundColor: const Color.fromARGB(173, 238, 49, 49),
     foregroundColor: Colors.white,
     padding: const EdgeInsets.symmetric(vertical: 15.0),
     textStyle: const TextStyle(
@@ -63,8 +63,8 @@ class AppStyles {
 
   static ButtonStyle submitButtonStyle = ElevatedButton.styleFrom(
     minimumSize: const Size(400, 40),
-    backgroundColor: Colors.teal[700],
-    foregroundColor: Colors.white,
+    backgroundColor: Color.fromARGB(255, 56, 26, 3),
+    foregroundColor: Color(0xFFF8F4F1),
     padding: const EdgeInsets.symmetric(vertical: 15.0),
     textStyle: const TextStyle(
       fontSize: 18,

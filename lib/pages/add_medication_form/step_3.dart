@@ -136,7 +136,7 @@ class _Step3State extends State<Step3> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.asset(
-                    'assets/medication.png',
+                    'assets/step3.png',
                     height: 150,
                     fit: BoxFit.contain,
                   ),

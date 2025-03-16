@@ -33,6 +33,7 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F4F1),
       body: Column(
         children: [
           // Weekly view calendar
@@ -50,14 +51,24 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
             },
             calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: Color(0xFF8B9EB7), // Using ARGB format in hex
+                color: Color.fromARGB(255, 255, 110, 110), // Using ARGB format in hex
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: Color.fromARGB(255, 11, 24, 66),
+                color: Color.fromARGB(255, 252, 52, 68),
                 shape: BoxShape.circle,
               ),
             ),
+            // calendarStyle: const CalendarStyle(
+            //   todayDecoration: BoxDecoration(
+            //     color: Color(0xFF8B9EB7), // Using ARGB format in hex
+            //     shape: BoxShape.circle,
+            //   ),
+            //   selectedDecoration: BoxDecoration(
+            //     color: Color.fromARGB(255, 11, 24, 66),
+            //     shape: BoxShape.circle,
+            //   ),
+            // ),
             headerVisible: false,
           ),
           Padding(
@@ -67,7 +78,7 @@ class _TaskVisualizationPageState extends State<TaskVisualizationPage> {
               style: const TextStyle(
                 fontSize: 20, // Increased font size
                 fontWeight: FontWeight.bold, // Bolder font weight
-                color: Color.fromARGB(255, 88, 88, 88), // Matched color
+                color: Color.fromARGB(255, 16, 15, 15), // Matched color
                 fontFamily: 'Roboto', // Optional: Set preferred font
               ),
               textAlign: TextAlign.center, // Optional: center alignment

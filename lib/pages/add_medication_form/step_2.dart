@@ -35,7 +35,7 @@ class _Step2State extends State<Step2> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset('assets/medication.png',
+                Image.asset('assets/step2.png',
                     height: 150, fit: BoxFit.contain),
                 const Text(
                   "How often do you take this medication?",

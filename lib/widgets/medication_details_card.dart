@@ -40,6 +40,7 @@ class MedicationDetailsCard extends StatelessWidget {
     return InkWell(
       onTap: onEdit,
       child: Card(
+        color: Colors.white,
         margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         elevation: 4,
         child: Padding(
@@ -47,51 +48,132 @@ class MedicationDetailsCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Row(
+              //   children: [
+              //     Container(
+              //       width: 60,
+              //       height: 60,
+              //       decoration: BoxDecoration(
+              //         borderRadius: BorderRadius.circular(12), // Rounded border
+              //         border: Border.all(
+              //           color: const Color.fromARGB(
+              //               255, 227, 227, 227), // Border color
+              //           width: 2, // Keep border width unchanged
+              //         ),
+              //         color: medication['imageBase64'] != null &&
+              //                 medication['imageBase64']!.isNotEmpty
+              //             ? Colors.transparent
+              //             : const Color.fromARGB(255, 101, 109, 123)
+              //                 .withOpacity(0.2),
+              //       ),
+              //       child: ClipRRect(
+              //         borderRadius: BorderRadius.circular(
+              //             10), // Slightly smaller than border radius
+              //         child: GestureDetector(
+              //           onTap: () {
+              //             if (medication['imageBase64'] != null &&
+              //                 medication['imageBase64']!.isNotEmpty) {
+              //               showImageDialog(
+              //                   context, medication['imageBase64']!);
+              //             }
+              //           },
+              //           child: medication['imageBase64'] != null &&
+              //                   medication['imageBase64']!.isNotEmpty
+              //               ? Image.memory(
+              //                   base64Decode(medication['imageBase64']!),
+              //                   width: 60, // Match container size
+              //                   height: 60,
+              //                   fit: BoxFit.cover,
+              //                 )
+              //               : Image.asset(
+              //                   'assets/pill.png', // Default image
+              //                   width: 60,
+              //                   height: 60,
+              //                   fit: BoxFit.cover,
+              //                 ),
+              //         ),
+              //       ),
+              //     ),
+              //     const SizedBox(width: 16),
+              //     Expanded(
+              //       child: Column(
+              //         crossAxisAlignment: CrossAxisAlignment.start,
+              //         children: [
+              //           Text(
+              //             medication['name'] ?? 'No Name',
+              //             style: const TextStyle(
+              //               fontSize: 20,
+              //               fontWeight: FontWeight.bold,
+              //             ),
+              //           ),
+              //           const SizedBox(height: 4),
+              //           Text(
+              //             frequencyText, // Display the updated frequency text
+              //             style: TextStyle(color: Colors.grey[600]),
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ],
+              // ),
               Row(
                 children: [
-                  Container(
-                    width: 60, // Width of the rounded square
-                    height: 60, // Height of the rounded square
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                          12), // Adjust the value for more or less rounding
-                      border: Border.all(
-                        color: const Color.fromARGB(255, 227, 227, 227), // Border color
-                        width: 2, // Thicker border
+                  // Image with border using Stack
+                  Stack(
+                    children: [
+                      // Border Container (bottom layer)
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius:
+                              BorderRadius.circular(12), // Rounded border
+                          border: Border.all(
+                            color: const Color.fromARGB(
+                                255, 227, 227, 227), // Border color
+                            width: 2, // Keep border width unchanged
+                          ),
+                          color: medication['imageBase64'] != null &&
+                                  medication['imageBase64']!.isNotEmpty
+                              ? Colors.transparent
+                              : const Color.fromARGB(255, 101, 109, 123)
+                                  .withOpacity(0.2),
+                        ),
                       ),
-                      color: medication['imageBase64'] != null &&
-                              medication['imageBase64']!.isNotEmpty
-                          ? Colors.transparent
-                          : const Color.fromARGB(255, 101, 109, 123)
-                              .withOpacity(0.2),
-                    ),
-                    child: GestureDetector(
-                      onTap: () {
-                        if (medication['imageBase64'] != null &&
-                            medication['imageBase64']!.isNotEmpty) {
-                          showImageDialog(context, medication['imageBase64']!);
-                        }
-                      },
-                      child: medication['imageBase64'] != null &&
-                              medication['imageBase64']!.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                  12), // Match the border radius
-                              child: Image.memory(
-                                base64Decode(medication['imageBase64']!),
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.medication,
-                              size: 36,
-                              color: Color.fromARGB(255, 3, 3, 77),
-                            ),
-                    ),
+
+                      // Image inside the border
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                              10), // Slightly smaller than border radius
+                          child: GestureDetector(
+                            onTap: () {
+                              if (medication['imageBase64'] != null &&
+                                  medication['imageBase64']!.isNotEmpty) {
+                                showImageDialog(
+                                    context, medication['imageBase64']!);
+                              }
+                            },
+                            child: medication['imageBase64'] != null &&
+                                    medication['imageBase64']!.isNotEmpty
+                                ? Image.memory(
+                                    base64Decode(medication['imageBase64']!),
+                                    fit: BoxFit
+                                        .cover, // Ensures the image fills properly inside
+                                  )
+                                : Image.asset(
+                                    'assets/pill.png', // Default image
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
+
+                  const SizedBox(width: 16), // Space between image and text
+
+                  // Column for name and frequency
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,6 +195,7 @@ class MedicationDetailsCard extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 8),
               const Text(
                 'Reminder Time(s):',
@@ -121,17 +204,28 @@ class MedicationDetailsCard extends StatelessWidget {
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8.0,
+                runSpacing: 8.0,
                 children: reminderTimes
-                    .map((time) => Chip(
-                          label: Text(time),
-                          backgroundColor: Color(0xFF8B9EB7),
-                          labelStyle: const TextStyle(
+                    .map((time) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Color(0xFFF2D6C3),
+                            borderRadius:
+                                BorderRadius.circular(7), // Same rounded shape
+                          ),
+                          child: Text(
+                            time,
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
-                              color: Colors.black),
+                              color: Colors.black,
+                            ),
+                          ),
                         ))
                     .toList(),
               ),
+
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

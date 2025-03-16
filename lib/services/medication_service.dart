@@ -2,6 +2,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:medicine_reminder/models/medication.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
@@ -392,4 +393,75 @@ Future<String?> fetchLatestTakenAt(
 //     return false;
 //   }
 // }
+
+  Future<void> saveMedication({
+    required String medicationId,
+    required Map<String, dynamic> medicationData,
+    required bool isEveryXHours,
+    required String medicationName,
+    required List<String> reminderTimes,
+    required int doseQuantity,
+    required String unit,
+    required String? startTime,
+    required String? endTime,
+    required int? intervalHours,
+  }) async {
+    try {
+      await cancelReminders(medicationId);
+
+      if (isEveryXHours) {
+        await scheduleIntervalReminders(
+          medicationId: medicationId,
+          medicationName: medicationName,
+          startTime: startTime ?? '',
+          endTime: endTime ?? '',
+          intervalHours: intervalHours ?? 0,
+          doseQuantity: doseQuantity,
+          unit: unit,
+        );
+      } else {
+        scheduleReminders(
+          medicationId: medicationId,
+          medicationName: medicationName,
+          reminderTimes: reminderTimes,
+          doseQuantity: doseQuantity,
+          unit: unit,
+        );
+      }
+
+      await updateMedication(medicationId, medicationData);
+    } catch (e) {
+      debugPrint('Error saving medication: $e');
+      throw Exception("Failed to save medication");
+    }
+  }
+
+  // Helper methods for time handling
+TimeOfDay? parseTimeString(String timeString) {
+  try {
+    timeString = timeString.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    final parts = timeString.split(' ');
+    if (parts.length == 2) {
+      final timeParts = parts[0].split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1].padLeft(2, '0'));
+      bool isPM = parts[1].toUpperCase() == 'PM';
+
+      final adjustedHour = isPM && hour != 12 ? hour + 12 : hour;
+      final finalHour = adjustedHour == 24 ? 0 : adjustedHour;
+
+      return TimeOfDay(hour: finalHour, minute: minute);
+    }
+  } catch (e) {
+    debugPrint('Error parsing time: $e');
+  }
+  return null;
+}
+
+String formatTimeOfDay(TimeOfDay time, BuildContext context) {
+  return TimeOfDay(hour: time.hour, minute: time.minute).format(context);
+}
+
+
 }

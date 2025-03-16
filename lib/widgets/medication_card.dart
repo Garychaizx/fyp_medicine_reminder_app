@@ -116,11 +116,13 @@ class _MedicationCardState extends State<MedicationCard> {
                                       fit: BoxFit.cover,
                                     ),
                                   )
-                                : const Icon(Icons.medication,
-                                    size: 50,
-                                    color: Color.fromARGB(255, 3, 3, 77)),
-                            const SizedBox(height: 10),
-                            const SizedBox(height: 10),
+                                : Image.asset(
+                                    'assets/pill.png', // Default image
+                                    fit: BoxFit.cover,
+                                    width: 80,
+                                    height: 80,
+                                  ),
+                            const SizedBox(height: 25),
                             Text(widget.name,
                                 style: const TextStyle(
                                     fontSize: 22, fontWeight: FontWeight.bold)),
@@ -234,6 +236,7 @@ class _MedicationCardState extends State<MedicationCard> {
         return GestureDetector(
           onTap: () => _showActionSheet(context, reminderTime),
           child: Card(
+            color: Colors.white,
             margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 26),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -246,47 +249,57 @@ class _MedicationCardState extends State<MedicationCard> {
                   Stack(
                     clipBehavior: Clip.none, // Allow tick to go outside
                     children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 227, 227, 227),
-                            width: 2,
+                      Stack(
+                        children: [
+                          // Border Container
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(
+                                color: const Color.fromARGB(
+                                    255, 227, 227, 227), // Border color
+                                width: 2, // Border width
+                              ),
+                              color: (widget.imageBase64 != null &&
+                                      widget.imageBase64!.isNotEmpty)
+                                  ? Colors.transparent
+                                  : const Color.fromARGB(255, 101, 109, 123)
+                                      .withOpacity(0.2),
+                            ),
                           ),
-                          color: (widget.imageBase64 != null &&
-                                  widget.imageBase64!.isNotEmpty)
-                              ? Colors.transparent
-                              : const Color.fromARGB(255, 101, 109, 123)
-                                  .withOpacity(0.2),
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            if (widget.imageBase64 != null &&
-                                widget.imageBase64!.isNotEmpty) {
-                              showImageDialog(context, widget.imageBase64!);
-                            }
-                          },
-                          child: widget.imageBase64 != null &&
-                                  widget.imageBase64!.isNotEmpty
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(
-                                      12), // Match the border radius
-                                  child: Image.memory(
-                                    base64Decode(widget.imageBase64!),
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.medication,
-                                  size: 36,
-                                  color: Color.fromARGB(255, 3, 3, 77),
-                                ),
-                        ),
+
+                          // Image inside the border
+                          Positioned.fill(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                  5), // Ensure image fits inside border
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (widget.imageBase64 != null &&
+                                      widget.imageBase64!.isNotEmpty) {
+                                    showImageDialog(
+                                        context, widget.imageBase64!);
+                                  }
+                                },
+                                child: widget.imageBase64 != null &&
+                                        widget.imageBase64!.isNotEmpty
+                                    ? Image.memory(
+                                        base64Decode(widget.imageBase64!),
+                                        fit: BoxFit
+                                            .cover, // Ensures image fits nicely inside
+                                      )
+                                    : Image.asset(
+                                        'assets/pill.png', // Default image
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+
                       // ✅ Adjusted tick position
                       if (takenAt != null)
                         Positioned(
@@ -295,7 +308,8 @@ class _MedicationCardState extends State<MedicationCard> {
                           child: Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color.fromARGB(255, 227, 227, 227), // Background for better contrast
+                              color: const Color.fromARGB(255, 227, 227,
+                                  227), // Background for better contrast
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.2),

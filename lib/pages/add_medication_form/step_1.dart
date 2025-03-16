@@ -52,7 +52,7 @@ class _Step1State extends State<Step1> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: Image.asset('assets/medication.png',
+            child: Image.asset('assets/step1.png',
                 height: 150, fit: BoxFit.contain),
           ),
           CustomFormField(

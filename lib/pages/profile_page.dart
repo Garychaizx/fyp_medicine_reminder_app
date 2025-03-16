@@ -21,10 +21,7 @@ class ProfilePage extends StatelessWidget {
     }
 
     return Scaffold(
-      // appBar: AppBar(
-      //   title: const Text('Profile'),
-      //   backgroundColor: Colors.deepPurple,
-      // ),
+      backgroundColor: const Color(0xFFF8F4F1),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -32,6 +29,7 @@ class ProfilePage extends StatelessWidget {
           children: [
             // Profile Header
             Card(
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
               child: Padding(
@@ -40,11 +38,11 @@ class ProfilePage extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 40,
-                      backgroundColor: Color(0xFF8B9EB7),
+                      backgroundColor: Colors.brown[800],
                       child: Text(
                         userData['name'][0].toUpperCase(),
                         style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                            color: Colors.white,fontSize: 24, fontWeight: FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -74,13 +72,13 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 10),
             ListTile(
               leading: const Icon(Icons.calendar_today,
-                  color: Color.fromARGB(255, 3, 3, 77)),
+                  color: Color(0xFF4E2A2A)),
               title: const Text('Age'),
               subtitle: Text(userData['age'].toString()),
             ),
             ListTile(
               leading: const Icon(Icons.date_range,
-                  color: Color.fromARGB(255, 3, 3, 77)),
+                  color: Color(0xFF4E2A2A)),
               title: const Text('Created At'),
               subtitle: Text(formatTimestamp(
                   userData['created_at'])), // Use formatted timestamp
@@ -95,7 +93,7 @@ class ProfilePage extends StatelessWidget {
             ),
             ListTile(
               leading:
-                  const Icon(Icons.lock, color: Color.fromARGB(255, 3, 3, 77)),
+                  const Icon(Icons.lock, color: Color(0xFF4E2A2A)),
               title: const Text('Password & Security'),
               onTap: () {
                 Navigator.push(
@@ -104,32 +102,6 @@ class ProfilePage extends StatelessWidget {
                 );
               },
             ),
-            // ListTile(
-            //   leading: const Icon(Icons.local_pharmacy,
-            //       color: Color.fromARGB(255, 3, 3, 77)),
-            //   title: const Text('Find Nearest Pharmacy'),
-            //   onTap: () {
-            //     Navigator.push(
-            //       context,
-            //       MaterialPageRoute(builder: (context) => NearbyPharmacyPage()),
-            //     );
-            //   },
-            // ),
-
-            // ListTile(
-            //   leading: const Icon(Icons.notifications, color: Colors.deepPurple),
-            //   title: const Text('Notification Preferences'),
-            //   onTap: () {
-            //     // Navigate to Notification Settings
-            //   },
-            // ),
-            // ListTile(
-            //   leading: const Icon(Icons.help, color: Colors.deepPurple),
-            //   title: const Text('FAQ'),
-            //   onTap: () {
-            //     // Navigate to FAQ Page
-            //   },
-            // ),
           ],
         ),
       ),
