@@ -147,14 +147,15 @@ class _MedicationCardState extends State<MedicationCard> {
                                         Navigator.pop(context);
                                       },
                                       icon: const Icon(Icons.check,
-                                          color: Colors
-                                              .black), // Tick icon for the button
+                                          color: Color.fromARGB(255, 56, 26, 3)), // Tick icon for the button
                                       label: const Text("Taken",
-                                          style:
-                                              TextStyle(color: Colors.black)),
+                                          style: TextStyle(
+                                            color: Color.fromARGB(255, 56, 26, 3),
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          )),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors
-                                            .transparent, // Remove background color
+                                        backgroundColor: const Color.fromARGB(255, 255, 241, 231), // Remove background color
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 20, vertical: 12),
                                         shape: RoundedRectangleBorder(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
+import 'package:medicine_reminder/services/medicines_databse_service.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -188,7 +189,7 @@ void main() async {
   print('All notifications scheduled.');
 
   NotificationService().monitorMedicationInventory();
-
+  await MedicineDatabase.loadMedicines();
   runApp(const MyApp());
 }
 

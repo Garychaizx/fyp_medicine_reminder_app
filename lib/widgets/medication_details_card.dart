@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:medicine_reminder/services/medicines_databse_service.dart';
 import '../services/medication_service.dart';
 import '../utils/dialog_helper.dart';
 
@@ -173,26 +174,108 @@ class MedicationDetailsCard extends StatelessWidget {
 
                   const SizedBox(width: 16), // Space between image and text
 
-                  // Column for name and frequency
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          medication['name'] ?? 'No Name',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          frequencyText, // Display the updated frequency text
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
+    // Column for name and frequency
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () {
+              final medicineDetails = MedicineDatabase.searchMedicine(medication['name'] ?? '');
+              if (medicineDetails != null && medicineDetails.isNotEmpty) {
+                showDialog(
+  context: context,
+  builder: (context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: Text(
+        medicineDetails['drug_name'] ?? 'Medicine Details',
+        style: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Medical Condition:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              medicineDetails['medical_condition'] ?? 'Not available',
+              style: const TextStyle(fontSize: 15, color: Colors.black87),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Side Effects:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              medicineDetails['side_effects'] ?? 'Not available',
+              style: const TextStyle(fontSize: 15, color: Colors.black87),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: const Text(
+            "Close",
+            style: TextStyle(fontSize: 16),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ],
+    );
+  },
+);
+
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Details not found.")),
+                );
+              }
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    medication['name'] ?? 'No Name',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      // no underline, no color changes — keep it clean
                     ),
                   ),
+                ),
+                const Icon(
+                  Icons.info_outline,
+                  size: 20,
+                  color: Colors.blueGrey, // subtle hint that it’s interactive
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            frequencyText,
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+        ],
+      ),
+    ),
                 ],
               ),
 

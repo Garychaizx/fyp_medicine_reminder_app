@@ -202,6 +202,7 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F4F1),
       appBar: AppBar(
         title: const Text(
           "Edit Medications",
