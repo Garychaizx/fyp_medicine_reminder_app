@@ -51,43 +51,135 @@ class NotificationService {
         hour = 0;
       }
 
-      // Generate a unique ID based on medication ID, hour, and minute
-      int uniqueId = medicationId.hashCode + hour * 60 + minute;
+   int uniqueId = medicationId.hashCode + hour * 60 + minute;
+    int followUpId = uniqueId + 1;
+    int missedCheckId = uniqueId + 2;  // New ID for missed check notification
 
-      // Schedule the notification with a unique ID
-      await AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: uniqueId,
-          channelKey: 'medication_channel',
-          title: 'Medicine Reminder',
-          body: 'Time to take $doseQuantity $unit of $medicationName',
-          category: NotificationCategory.Reminder,
-          wakeUpScreen: true,
-          payload: {'medicationId': medicationId},
-          // // customSound: 'assets/alarm_sound.mp3', // Replace with your custom sound file path
-          // duration: const Duration(seconds: 5), // Set the duration of the sound
+    // Main reminder notification
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: uniqueId,
+        channelKey: 'medication_channel',
+        title: 'Medicine Reminder',
+        body: 'Time to take $doseQuantity $unit of $medicationName',
+        category: NotificationCategory.Reminder,
+        wakeUpScreen: true,
+        payload: {
+          'medicationId': medicationId,
+          'medicationName': medicationName,
+          'doseQuantity': doseQuantity.toString(),
+          'specificReminderTime': reminderTime,
+          'type': 'main',
+        },
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: 'MARK_TAKEN',
+          label: 'Mark as Taken',
+          enabled: true,
+          actionType: ActionType.Default,
         ),
-        actionButtons: [
-          NotificationActionButton(
-            key: 'MARK_TAKEN',
-            label: 'Mark as Taken',
-          ),
-        ],
-        schedule: NotificationCalendar(
-          hour: hour,
-          minute: minute,
-          second: 0,
-          repeats: true, // Daily repeat
-          allowWhileIdle: true,
-        ),
-      );
+      ],
+      schedule: NotificationCalendar(
+        hour: hour,
+        minute: minute,
+        second: 0,
+        repeats: true,
+        allowWhileIdle: true,
+      ),
+    );
 
-      debugPrint(
-          'Notification scheduled successfully for daily repeat at ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
-    } catch (e) {
-      debugPrint('Error scheduling notification: $e');
-    }
+// Follow-up reminder (5 seconds later)
+await AwesomeNotifications().createNotification(
+  content: NotificationContent(
+    id: followUpId,
+    channelKey: 'medication_channel',
+    title: 'Follow-up Reminder',
+    body: 'Did you take your $doseQuantity $unit of $medicationName?',
+    category: NotificationCategory.Reminder,
+    wakeUpScreen: true,
+    payload: {
+      'medicationId': medicationId,
+      'medicationName': medicationName,
+      'doseQuantity': doseQuantity.toString(),
+      'specificReminderTime': reminderTime,
+      'type': 'followup',
+      'followUpId': followUpId.toString(), // Add this to track the ID
+    },
+  ),
+  actionButtons: [
+    NotificationActionButton(
+      key: 'MARK_TAKEN',
+      label: 'Mark as Taken',
+      enabled: true,
+      actionType: ActionType.Default,
+    ),
+  ],
+  schedule: NotificationCalendar(
+    hour: hour,
+    minute: minute,
+    second: 5,
+    repeats: false, // Set this to false
+    allowWhileIdle: true,
+  ),
+);
+
+    // Silent missed check notification (5 seconds after follow-up)
+// Silent missed check notification (5 seconds after follow-up)
+await AwesomeNotifications().createNotification(
+  content: NotificationContent(
+    id: missedCheckId,
+    channelKey: 'medication_channel',
+    title: 'Missed Medication Check',
+    body: 'Checking medication status',
+    payload: {
+      'medicationId': medicationId,
+      'medicationName': medicationName,
+      'doseQuantity': doseQuantity.toString(),
+      'specificReminderTime': reminderTime,
+      'type': 'missed_check',
+    },
+    displayOnBackground: true,
+    displayOnForeground: false, // Ensure this is set to false
+    autoDismissible: true,
+  ),
+  schedule: NotificationCalendar(
+    hour: hour,
+    minute: minute,
+    second: 10,
+    repeats: false, // Ensure this is set to false
+    allowWhileIdle: true,
+  ),
+);
+
+    debugPrint('All notifications scheduled successfully');
+  } catch (e) {
+    debugPrint('Error scheduling notifications: $e');
   }
+}
+
+// Add a method to cancel follow-up reminder
+Future<void> cancelFollowUpReminder(int followUpId) async {
+  try {
+    print('Attempting to cancel follow-up reminder with ID: $followUpId');
+    
+    // Cancel the specific notification
+    await AwesomeNotifications().cancel(followUpId);
+    
+    // Also cancel any scheduled notifications with this ID
+    final scheduledNotifications = await AwesomeNotifications().listScheduledNotifications();
+    for (var notification in scheduledNotifications) {
+      if (notification.content?.id == followUpId) {
+        await AwesomeNotifications().cancelSchedule(followUpId);
+        break;
+      }
+    }
+    
+    print('Follow-up reminder cancelled successfully');
+  } catch (e) {
+    print('Error cancelling follow-up reminder: $e');
+  }
+}
 
   Future<void> cancelAllMedicationReminders() async {
     // Logic to cancel all scheduled notifications
@@ -175,8 +267,6 @@ Future<void> monitorMedicationInventory() async {
   });
 }
 
-
-
 Future<void> scheduleRefillReminder(
   String medicationId,
   String medicationName,
@@ -217,7 +307,6 @@ Future<void> scheduleRefillReminder(
   }
 }
 
-
 TimeOfDay? parseTimeOfDay(String time) {
   final RegExp timeRegex = RegExp(r'(\d+):(\d+)\s*(AM|PM)', caseSensitive: false);
   final Match? match = timeRegex.firstMatch(time);
@@ -238,6 +327,30 @@ TimeOfDay? parseTimeOfDay(String time) {
   }
 
   return TimeOfDay(hour: hour, minute: minute);
+}
+
+Future<bool?> fetchMissedLog(
+  String userUid,
+  String medicationId,
+  DateTime selectedDay,
+  String specificReminderTime,
+) async {
+  try {
+    final adherenceLogsRef = FirebaseFirestore.instance.collection('adherence_logs');
+
+    final querySnapshot = await adherenceLogsRef
+        .where('user_uid', isEqualTo: userUid)
+        .where('medication_id', isEqualTo: medicationId)
+        .where('specific_reminder_time', isEqualTo: specificReminderTime)
+        .where('date_remind', isEqualTo: Timestamp.fromDate(selectedDay))
+        .where('status', isEqualTo: 'missed')
+        .get();
+
+    return querySnapshot.docs.isNotEmpty;
+  } catch (e) {
+    print('Error fetching missed logs: $e');
+    return null;
+  }
 }
 
 }

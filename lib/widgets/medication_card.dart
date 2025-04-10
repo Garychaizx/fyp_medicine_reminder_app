@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 
@@ -7,9 +8,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:intl/intl.dart';
+import 'package:medicine_reminder/services/notification_service.dart';
 import 'package:medicine_reminder/utils/dialog_helper.dart'; // For formatting timestamps
 
 class MedicationCard extends StatefulWidget {
+    // Add this static property to hold references to all card states
+  static final List<_MedicationCardState> _instances = [];
+
+  // Add this static method to refresh all instances
+  static void refreshAll() {
+    for (var instance in _instances) {
+      if (instance.mounted) {
+        instance._fetchMedicationStatus();
+      }
+    }
+  }
   final String name;
   final String unit;
   final int doseQuantity;
@@ -34,32 +47,90 @@ class MedicationCard extends StatefulWidget {
 }
 
 class _MedicationCardState extends State<MedicationCard> {
-  final Map<String, String?> takenAtMap = {}; // Store taken times per reminder
+  final Map<String, Map<String, dynamic>?> statusMap = {};
+    bool isFlashing = false; // To track if the card should flash
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
+    MedicationCard._instances.add(this);
     SchedulerBinding.instance.addPostFrameCallback((_) {
-      _fetchTakenAtForReminders();
+      _fetchMedicationStatus();
+    });
+    _startFlashingCheck();
+  }
+    @override
+  void dispose() {
+    MedicationCard._instances.remove(this);
+    _timer?.cancel();
+    super.dispose();
+  }
+void _startFlashingCheck() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      final now = TimeOfDay.now();
+      final currentDate = DateTime.now();
+      
+      // Check if the selected day matches the current date
+      if (widget.selectedDay.year == currentDate.year &&
+          widget.selectedDay.month == currentDate.month &&
+          widget.selectedDay.day == currentDate.day) {
+            
+        for (String reminderTime in widget.reminderTimes) {
+          final parsedTime = _parseTimeOfDay(reminderTime);
+          if (parsedTime != null &&
+              now.hour == parsedTime.hour &&
+              now.minute == parsedTime.minute) {
+            // If the current time matches a reminder time, start flashing
+            if (!isFlashing) {
+              setState(() {
+                isFlashing = true;
+              });
+            }
+            return;
+          }
+        }
+      }
+      
+      // Stop flashing if no reminder time matches or it's not the current day
+      if (isFlashing) {
+        setState(() {
+          isFlashing = false;
+        });
+      }
     });
   }
+  TimeOfDay? _parseTimeOfDay(String time) {
+    final RegExp timeRegex = RegExp(r'(\d+):(\d+)\s*(AM|PM)', caseSensitive: false);
+    final Match? match = timeRegex.firstMatch(time);
 
-  Future<void> _fetchTakenAtForReminders() async {
+    if (match == null) return null;
+
+    int hour = int.parse(match.group(1)!);
+    final int minute = int.parse(match.group(2)!);
+    final String period = match.group(3)!.toUpperCase();
+
+    if (period == 'PM' && hour != 12) hour += 12;
+    if (period == 'AM' && hour == 12) hour = 0;
+
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+  Future<void> _fetchMedicationStatus() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null) {
       final medicationService = MedicationService();
 
       for (String time in widget.reminderTimes) {
-        final takenAt = await medicationService.fetchLatestTakenAt(
+        final status = await medicationService.fetchLatestTakenAt(
           currentUser.uid,
           widget.medicationId,
           widget.selectedDay,
-          time, // Check for this specific reminder time
+          time,
         );
 
         if (mounted) {
           setState(() {
-            takenAtMap[time] = takenAt; // Store taken time for each reminder
+            statusMap[time] = status;
           });
         }
       }
@@ -205,44 +276,85 @@ class _MedicationCardState extends State<MedicationCard> {
     );
   }
 
-  Future<void> _markAsTaken(String reminderTime) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return;
+Future<void> _markAsTaken(String reminderTime) async {
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) return;
 
-    final medicationService = MedicationService();
-    await medicationService.updateInventory(
-        widget.medicationId, widget.doseQuantity);
-    await medicationService.logAdherence(
-      currentUser.uid,
-      widget.medicationId,
-      widget.name,
-      widget.doseQuantity,
-      widget.selectedDay,
-      reminderTime,
+  // Calculate the notification IDs
+  final hour = int.parse(reminderTime.split(':')[0]);
+  final minute = int.parse(reminderTime.split(':')[1].split(' ')[0]);
+  final mainNotificationId = widget.medicationId.hashCode + hour * 60 + minute;
+  final followUpId = mainNotificationId + 1;
+
+  // Cancel the follow-up reminder immediately
+  await NotificationService().cancelFollowUpReminder(followUpId);
+
+  final medicationService = MedicationService();
+  
+  // Check if there's a missed log
+  final status = statusMap[reminderTime];
+  final isMissed = status?['status'] == 'missed';
+
+  if (isMissed) {
+    // Update the missed log to taken
+    await medicationService.updateAdherenceLog(
+      userUid: currentUser.uid,
+      medicationId: widget.medicationId,
+      specificReminderTime: reminderTime,
+      selectedDay: widget.selectedDay,
+      newStatus: 'taken'
     );
-
-    await _fetchTakenAtForReminders();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text('${widget.name} marked as taken at $reminderTime')),
+  } else {
+    // Create new adherence log
+    await medicationService.logAdherence(
+      userUid: currentUser.uid,
+      medicationId: widget.medicationId,
+      medicationName: widget.name,
+      doseQuantity: widget.doseQuantity,
+      selectedDay: widget.selectedDay,
+      specificReminderTime: reminderTime,
+      status: 'taken',
+      followUpId: followUpId,
     );
   }
 
-  @override
+  await medicationService.updateInventory(widget.medicationId, widget.doseQuantity);
+  
+  // Fetch updated status
+  await _fetchMedicationStatus();
+  
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(isMissed 
+        ? '${widget.name} updated from missed to taken at $reminderTime'
+        : '${widget.name} marked as taken at $reminderTime'
+      ),
+    ),
+  );
+}
+
+   @override
   Widget build(BuildContext context) {
     return Column(
       children: widget.reminderTimes.map((reminderTime) {
-        final takenAt = takenAtMap[reminderTime];
+        final status = statusMap[reminderTime];
+        final isMissed = status?['status'] == 'missed';
+        final takenTime = status?['time'];
 
         return GestureDetector(
           onTap: () => _showActionSheet(context, reminderTime),
-          child: Card(
-            color: Colors.white,
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 26),
-            shape: RoundedRectangleBorder(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              color: isFlashing ? Colors.yellow[100] : Colors.white, // Flashing effect
+              border: Border.all(
+                color: isFlashing ? Colors.orange : const Color.fromARGB(255, 227, 227, 227),
+                width: isFlashing ? 2 : 1,
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
-            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 26),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -300,17 +412,15 @@ class _MedicationCardState extends State<MedicationCard> {
                           ),
                         ],
                       ),
-
-                      // ✅ Adjusted tick position
-                      if (takenAt != null)
+                      // Modified tick/cross position
+                      if (status != null)
                         Positioned(
                           right: -5,
                           top: -5,
                           child: Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: const Color.fromARGB(255, 227, 227,
-                                  227), // Background for better contrast
+                              color: const Color.fromARGB(255, 227, 227, 227),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.2),
@@ -319,10 +429,12 @@ class _MedicationCardState extends State<MedicationCard> {
                                 )
                               ],
                             ),
-                            child: const Icon(
-                              Icons.check_circle,
-                              color: Color.fromARGB(255, 45, 174, 49),
-                              size: 18, // Bigger for better visibility
+                            child: Icon(
+                              isMissed ? Icons.close : Icons.check_circle,
+                              color: isMissed
+                                  ? Colors.white
+                                  : const Color.fromARGB(255, 72, 211, 77),
+                              size: 18,
                             ),
                           ),
                         ),
@@ -343,15 +455,16 @@ class _MedicationCardState extends State<MedicationCard> {
                         const SizedBox(height: 4),
                         Text(
                           'Take ${widget.doseQuantity} ${widget.unit}',
-                          style:
-                              TextStyle(fontSize: 16, color: Colors.grey[700]),
+                          style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                         ),
-                        if (takenAt != null)
+                        if (status != null)
                           Text(
-                            'Taken at $takenAt',
-                            style: const TextStyle(
+                            isMissed ? 'Missed' : 'Taken at $takenTime',
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color.fromARGB(255, 14, 90, 17),
+                              color: isMissed
+                                  ? const Color.fromARGB(255, 197, 196, 196)
+                                  : const Color.fromARGB(255, 13, 166, 19),
                             ),
                           ),
                       ],
@@ -366,9 +479,6 @@ class _MedicationCardState extends State<MedicationCard> {
     );
   }
 }
-
-
-
 
   // Future<void> _updateInventory(BuildContext context, String medicationId, int doseQuantity) async {
   //   try {

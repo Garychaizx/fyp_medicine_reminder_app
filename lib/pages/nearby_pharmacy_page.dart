@@ -62,7 +62,8 @@ class _NearbyPharmacyPageState extends State<NearbyPharmacyPage> {
       );
     });
 
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_currentPosition!, 14));
+    _mapController
+        ?.animateCamera(CameraUpdate.newLatLngZoom(_currentPosition!, 14));
 
     _getNearbyPharmacies(_currentPosition!);
   }
@@ -91,7 +92,8 @@ class _NearbyPharmacyPageState extends State<NearbyPharmacyPage> {
               final LatLng latLng = LatLng(location['lat'], location['lng']);
               final String placeName = place['name'];
 
-              print("📍 Found Pharmacy: $placeName at (${latLng.latitude}, ${latLng.longitude})");
+              print(
+                  "📍 Found Pharmacy: $placeName at (${latLng.latitude}, ${latLng.longitude})");
 
               _markers.add(
                 Marker(
@@ -121,7 +123,12 @@ class _NearbyPharmacyPageState extends State<NearbyPharmacyPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _currentPosition == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Color.fromARGB(255, 56, 26, 3)), // Change color here
+              ),
+            )
           : GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: _currentPosition!,

@@ -9,6 +9,7 @@ import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/services/medicines_databse_service.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:medicine_reminder/widgets/medication_card.dart';
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -17,10 +18,67 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // Add this static method to receive notification actions
 @pragma('vm:entry-point')
 Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
-  if (receivedAction.buttonKeyInput == 'MARK_TAKEN') {
-    // Handle mark as taken action
-  } else if (receivedAction.buttonKeyInput == 'SNOOZE') {
-    // Handle snooze action
+  if (receivedAction.buttonKeyPressed == 'MARK_TAKEN') {
+    print('User marked medication as taken.');
+  }else {
+    print('No action taken. Logging missed medication.');
+    // Existing code for logging missed medications
+  }
+}
+
+@pragma('vm:entry-point')
+Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotification) async {
+  print('Notification displayed:');
+  print('ID: ${receivedNotification.id}');
+  print('Title: ${receivedNotification.title}');
+  print('Body: ${receivedNotification.body}');
+  print('Payload: ${receivedNotification.payload}');
+
+  final payload = receivedNotification.payload;
+  if (payload == null) {
+    print('Payload is null');
+    return;
+  }
+
+  // Check if this is a missed medication check
+  if (payload['type'] == 'missed_check') {
+    print('Processing missed medication check');
+
+    final userUid = FirebaseAuth.instance.currentUser?.uid;
+    if (userUid == null) {
+      print('No user logged in');
+      return;
+    }
+
+    final medicationService = MedicationService();
+
+    // Check if medication was taken
+    final latestTaken = await medicationService.fetchLatestTakenAt(
+      userUid,
+      payload['medicationId'] ?? '',
+      DateTime.now(),
+      payload['specificReminderTime'] ?? '',
+    );
+
+    print('Latest taken status: $latestTaken');
+
+    // If no "taken" log exists, create a "missed" log
+    if (latestTaken == null) {
+      print('No taken log found, creating missed log');
+      await medicationService.logAdherence(
+        userUid: userUid,
+        medicationId: payload['medicationId'] ?? '',
+        medicationName: payload['medicationName'] ?? '',
+        doseQuantity: int.parse(payload['doseQuantity'] ?? '0'),
+        selectedDay: DateTime.now(),
+        specificReminderTime: payload['specificReminderTime'] ?? '',
+        status: 'missed',
+      );
+      print('Missed medication log created');
+      MedicationCard.refreshAll();
+    } else {
+      print('Medication was already taken at: $latestTaken');
+    }
   }
 }
 
@@ -150,9 +208,14 @@ void main() async {
   print('AwesomeNotifications initialized.');
 
   // Set up the action listener for notifications
-  await AwesomeNotifications().setListeners(
-    onActionReceivedMethod: onActionReceivedMethod,
-  );
+await AwesomeNotifications().setListeners(
+  onActionReceivedMethod: onActionReceivedMethod,
+  onNotificationCreatedMethod: (ReceivedNotification receivedNotification) async {
+    print('Notification created: ${receivedNotification.title}');
+    return;
+  },
+  onNotificationDisplayedMethod: onNotificationDisplayedMethod, // Add this listener
+);
   print('Notification action listener set up.');
 
   // Cancel all existing notifications at app start to prevent previous set reminder pop up

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
+import 'package:medicine_reminder/pages/medication_adherence_page.dart';
 import 'package:medicine_reminder/pages/medications_page.dart';
 import 'package:medicine_reminder/pages/nearby_pharmacy_page.dart';
 import 'package:medicine_reminder/pages/profile_page.dart';
@@ -13,7 +14,8 @@ Future<Map<String, dynamic>> fetchUserData() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) throw Exception("No logged-in user found");
 
-  final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+  final userDoc =
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
   if (!userDoc.exists) throw Exception("User data not found");
 
   return userDoc.data()!;
@@ -40,55 +42,75 @@ class _NavBarState extends State<Navbar> {
   }
 
   final List<Widget> _pages = [
-    // Replace with your home page
     TaskVisualizationPage(),
-    // Replace with your updates page
-    NearbyPharmacyPage(),
-    // The new medications page
+        StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('medications')
+          .where('user_uid', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No medications found.'));
+        } else {
+          final medications = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id; // Add the document ID
+            return data;
+          }).toList();
+
+          return MedicationAdherencePage(medications: medications);
+        }
+      },
+    ),
     MedicationsPage(),
-    // Replace with your manage page
+    NearbyPharmacyPage(),
     FutureBuilder<Map<String, dynamic>>(
-    future: fetchUserData(), // Create a function to fetch user data
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      } else if (snapshot.hasError) {
-        return Center(child: Text('Error: ${snapshot.error}'));
-      } else {
-        return ProfilePage(userData: snapshot.data ?? {});
-      }
-    },
-  ),
+      future: fetchUserData(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else {
+          return ProfilePage(userData: snapshot.data ?? {});
+        }
+      },
+    ),
   ];
 
-    final List<String> _titles = [
+  final List<String> _titles = [
     'Home',
-    'Pharmacies nearby',
+    'Adherence',
     'Medications',
+    'Pharmacies nearby',
     'Profile',
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-appBar: AppBar(
-  title: Text(
-    _titles[_currentIndex],
-    style: TextStyle(
-      fontSize: 20,  // Adjust font size as needed
-      fontWeight: FontWeight.bold, // Make it bold
-      color: Colors.black, // Change color to white
-    ),
-  ),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.logout),
-      onPressed: () => handleLogout(context),
-      color: Colors.black,
-    ),
-  ],
-  backgroundColor: const Color(0xFFF8F4F1),
-),
+      appBar: AppBar(
+        title: Text(
+          _titles[_currentIndex],
+          style: TextStyle(
+            fontSize: 20, // Adjust font size as needed
+            fontWeight: FontWeight.bold, // Make it bold
+            color: Colors.black, // Change color to white
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => handleLogout(context),
+            color: Colors.black,
+          ),
+        ],
+        backgroundColor: const Color(0xFFF8F4F1),
+      ),
       body: _pages[_currentIndex],
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
@@ -105,12 +127,16 @@ appBar: AppBar(
               text: 'Home',
             ),
             GButton(
-              icon: Icons.medical_services_outlined,
-              text: 'Pharmacies',
+              icon: Icons.bar_chart_outlined, // Icon for adherence
+              text: 'Adherence',
             ),
             GButton(
               icon: Icons.medication_liquid_sharp,
               text: 'Medications',
+            ),
+            GButton(
+              icon: Icons.medical_services_outlined,
+              text: 'Pharmacies',
             ),
             GButton(
               icon: Icons.person_2_outlined,
@@ -127,4 +153,3 @@ appBar: AppBar(
     );
   }
 }
-

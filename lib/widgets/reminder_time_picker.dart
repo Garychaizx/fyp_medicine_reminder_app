@@ -58,10 +58,29 @@ class ReminderTimePicker extends StatelessWidget {
     );
   }
 
-  Future<void> _selectTime(BuildContext context) async {
+ Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: time ?? TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: const Color.fromARGB(255, 241, 227, 217), // Secondary button background color
+              onPrimary: Colors.black, // Secondary button text color
+              onSurface: Colors.black, // Text color on the surface
+               secondary: const Color.fromARGB(255, 44, 20, 3), // AM/PM button background color
+            onSecondary: Colors.white, // AM/PM button text color
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color.fromARGB(255, 56, 26, 3), // Button text color
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != time) {
       onSelect(picked);

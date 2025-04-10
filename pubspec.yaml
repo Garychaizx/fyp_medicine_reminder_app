@@ -57,6 +57,7 @@ dependencies:
   path_provider: ^2.1.5
   flutter_dotenv: ^5.2.1
   csv: ^5.0.2
+  percent_indicator: ^4.2.5
 
   # google_maps_flutter: 2.10.0
   # flutter_plugin_android_lifecycle: ^2.0.15  # Add this explicitly

@@ -292,40 +292,51 @@ Map<String, List<Map<String, dynamic>>> groupMedicationsByTime(
     }
   }
 
-  Future<void> logAdherence(String userUid, String medicationId,
-      String medicationName, int doseQuantity, DateTime selectedDay, String specificReminderTime) async {
-    try {
-       print('Logging adherence for user: $userUid, medication: $medicationId, dose: $doseQuantity at $specificReminderTime');
+Future<void> logAdherence({
+  required String userUid,
+  required String medicationId,
+  required String medicationName,
+  required int doseQuantity,
+  required DateTime selectedDay,
+  required String specificReminderTime,
+  required String status,
+  int? followUpId, // Add this parameter
+}) async {
+  try {
+    print('Logging adherence for user: $userUid, medication: $medicationId, dose: $doseQuantity at $specificReminderTime');
+print('Logging adherence for user: $userUid, medication: $medicationId, dose: $doseQuantity at $specificReminderTime');
+    print('Follow-up ID to cancel: $followUpId'); // Debug log
+    final adherenceLogRef = _firestore.collection('adherence_logs');
 
+    await adherenceLogRef.add({
+      'medication_id': medicationId,
+      'medication_name': medicationName,
+      'dose_quantity': doseQuantity,
+      'date_remind': selectedDay,
+      'date_taken': status == 'taken' ? FieldValue.serverTimestamp() : null,
+      'user_uid': userUid,
+      'specific_reminder_time': specificReminderTime,
+      'status': status,
+    });
 
-      final adherenceLogRef = _firestore
-          // .collection('users')
-          // .doc(userUid)
-          .collection('adherence_logs');
-
-      await adherenceLogRef.add({
-        'medication_id': medicationId,
-        'medication_name': medicationName,
-        'dose_quantity': doseQuantity,
-        'date_remind': selectedDay,
-        'date_taken': FieldValue.serverTimestamp(),
-        'user_uid': userUid,
-        'specific_reminder_time': specificReminderTime,
-      });
-
-      print('Adherence log added successfully');
-    } catch (e) {
-      print('Error logging adherence: $e');
-      throw Exception('Failed to log adherence: $e');
+    // If medication is marked as taken, cancel the follow-up reminder
+    if (status == 'taken' && followUpId != null) {
+      await _notificationService.cancelFollowUpReminder(followUpId);
     }
-  }
 
-Future<String?> fetchLatestTakenAt(
-    String userId, 
-    String medicationId, 
-    DateTime currentReminderDate, 
-    String specificReminderTime // Fetch only for this reminder time
-  ) async {
+    print('Adherence log added successfully');
+  } catch (e) {
+    print('Error logging adherence: $e');
+    throw Exception('Failed to log adherence: $e');
+  }
+}
+
+Future<Map<String, dynamic>?> fetchLatestTakenAt(
+  String userId, 
+  String medicationId, 
+  DateTime currentReminderDate, 
+  String specificReminderTime
+) async {
   try {
     final startOfReminderDate = DateTime(
       currentReminderDate.year,
@@ -338,7 +349,7 @@ Future<String?> fetchLatestTakenAt(
         .collection('adherence_logs')
         .where('user_uid', isEqualTo: userId)
         .where('medication_id', isEqualTo: medicationId)
-        .where('specific_reminder_time', isEqualTo: specificReminderTime) // Match specific time
+        .where('specific_reminder_time', isEqualTo: specificReminderTime)
         .where('date_remind', isGreaterThanOrEqualTo: startOfReminderDate)
         .where('date_remind', isLessThan: endOfReminderDate)
         .orderBy('date_taken', descending: true)
@@ -347,9 +358,20 @@ Future<String?> fetchLatestTakenAt(
 
     if (querySnapshot.docs.isNotEmpty) {
       final doc = querySnapshot.docs.first;
-      final dateTaken = doc['date_taken'] as Timestamp;
-
-      return DateFormat('hh:mm a, dd MMMM ').format(dateTaken.toDate());
+      final status = doc['status'] as String;
+      
+      if (status == 'taken') {
+        final dateTaken = doc['date_taken'] as Timestamp;
+        return {
+          'status': 'taken',
+          'time': DateFormat('hh:mm a, dd MMMM ').format(dateTaken.toDate())
+        };
+      } else if (status == 'missed') {
+        return {
+          'status': 'missed',
+          'time': null
+        };
+      }
     }
   } catch (e) {
     print('Error fetching latest taken at: $e');
@@ -357,42 +379,10 @@ Future<String?> fetchLatestTakenAt(
   return null;
 }
 
-
   Future<void> cancelReminders(String medicationId) async {
   await AwesomeNotifications().cancelNotificationsByChannelKey(medicationId);
 }
 
-
-// Future<bool> fetchAdherenceLog(String medicationId, DateTime selectedDay) async {
-//   try {
-//     // Define the start and end of the selected day
-//     final startOfDay = Timestamp.fromDate(
-//       DateTime(selectedDay.year, selectedDay.month, selectedDay.day),
-//     );
-//     final endOfDay = Timestamp.fromDate(
-//       DateTime(selectedDay.year, selectedDay.month, selectedDay.day, 23, 59, 59),
-//     );
-
-//     // Step 1: Fetch documents filtered by medication_id
-//     final adherenceDocs = await FirebaseFirestore.instance
-//         .collection('adherence_logs')
-//         .where('medication_id', isEqualTo: medicationId)
-//         .get();
-
-//     // Step 2: Filter results by timestamp in the app
-//     final filteredDocs = adherenceDocs.docs.where((doc) {
-//       final timestamp = doc['timestamp'] as Timestamp;
-//       return timestamp.compareTo(startOfDay) >= 0 &&
-//           timestamp.compareTo(endOfDay) <= 0;
-//     });
-
-//     // Return whether there is any adherence log for the day
-//     return filteredDocs.isNotEmpty;
-//   } catch (e) {
-//     print('Error fetching adherence logs: $e');
-//     return false;
-//   }
-// }
 
   Future<void> saveMedication({
     required String medicationId,
@@ -461,6 +451,45 @@ TimeOfDay? parseTimeString(String timeString) {
 
 String formatTimeOfDay(TimeOfDay time, BuildContext context) {
   return TimeOfDay(hour: time.hour, minute: time.minute).format(context);
+}
+Future<void> updateAdherenceLog({
+  required String userUid,
+  required String medicationId,
+  required String specificReminderTime,
+  required DateTime selectedDay,
+  required String newStatus,
+}) async {
+  try {
+    final startOfReminderDate = DateTime(
+      selectedDay.year,
+      selectedDay.month,
+      selectedDay.day,
+    );
+    final endOfReminderDate = startOfReminderDate.add(const Duration(days: 1));
+
+    // Find the missed log
+    final querySnapshot = await _firestore
+        .collection('adherence_logs')
+        .where('user_uid', isEqualTo: userUid)
+        .where('medication_id', isEqualTo: medicationId)
+        .where('specific_reminder_time', isEqualTo: specificReminderTime)
+        .where('date_remind', isGreaterThanOrEqualTo: startOfReminderDate)
+        .where('date_remind', isLessThan: endOfReminderDate)
+        .where('status', isEqualTo: 'missed')
+        .get();
+
+    if (querySnapshot.docs.isNotEmpty) {
+      final docId = querySnapshot.docs.first.id;
+      await _firestore.collection('adherence_logs').doc(docId).update({
+        'status': newStatus,
+        'date_taken': FieldValue.serverTimestamp(),
+      });
+      print('Adherence log updated from missed to taken');
+    }
+  } catch (e) {
+    print('Error updating adherence log: $e');
+    throw Exception('Failed to update adherence log: $e');
+  }
 }
 
 

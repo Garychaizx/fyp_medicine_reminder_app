@@ -125,6 +125,7 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     try {
       final updatedData = {
         'name': nameController.text,
+        'reminder_times': reminderTimeControllers.map((c) => c.text).toList(),
         'frequency': _frequency,
         'current_inventory': int.tryParse(currentInventoryController.text) ?? 0,
         'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
