@@ -20,7 +20,60 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
   if (receivedAction.buttonKeyPressed == 'MARK_TAKEN') {
     print('User marked medication as taken.');
-  }else {
+    
+    final payload = receivedAction.payload;
+    if (payload == null) {
+      print('No payload found in notification');
+      return;
+    }
+
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    final medicationService = MedicationService();
+    final reminderTime = payload['specificReminderTime'] ?? '';
+    final medicationId = payload['medicationId'] ?? '';
+    final medicationName = payload['medicationName'] ?? '';
+    final doseQuantity = int.parse(payload['doseQuantity'] ?? '0');
+
+    // Check for existing missed log
+    final status = await medicationService.fetchLatestTakenAt(
+      currentUser.uid,
+      medicationId,
+      DateTime.now(),
+      reminderTime,
+    );
+
+    final isMissed = status?['status'] == 'missed';
+
+    if (isMissed) {
+      await medicationService.updateAdherenceLog(
+        userUid: currentUser.uid,
+        medicationId: medicationId,
+        specificReminderTime: reminderTime,
+        selectedDay: DateTime.now(),
+        newStatus: 'taken'
+      );
+    } else {
+      await medicationService.logAdherence(
+        userUid: currentUser.uid,
+        medicationId: medicationId,
+        medicationName: medicationName,
+        doseQuantity: doseQuantity,
+        selectedDay: DateTime.now(),
+        specificReminderTime: reminderTime,
+        status: 'taken',
+        followUpId: int.parse(payload['followUpId'] ?? '0'),
+      );
+    }
+
+    // Update inventory
+    await medicationService.updateInventory(medicationId, doseQuantity);
+
+    // Refresh all medication cards
+    MedicationCard.refreshAll();
+    
+  } else {
     print('No action taken. Logging missed medication.');
     // Existing code for logging missed medications
   }

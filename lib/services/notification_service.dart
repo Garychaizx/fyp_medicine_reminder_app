@@ -118,7 +118,7 @@ await AwesomeNotifications().createNotification(
   schedule: NotificationCalendar(
     hour: hour,
     minute: minute,
-    second: 5,
+    second: 10,
     repeats: false, // Set this to false
     allowWhileIdle: true,
   ),
@@ -146,7 +146,7 @@ await AwesomeNotifications().createNotification(
   schedule: NotificationCalendar(
     hour: hour,
     minute: minute,
-    second: 10,
+    second: 20,
     repeats: false, // Ensure this is set to false
     allowWhileIdle: true,
   ),

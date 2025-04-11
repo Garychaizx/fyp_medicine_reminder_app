@@ -5,7 +5,8 @@ class ReminderTimePicker extends StatelessWidget {
   final int index;
   final TimeOfDay? time;
   final bool hasAttempted;
-  final ValueChanged<TimeOfDay?> onSelect;
+  final Function(TimeOfDay?) onSelect;
+  final String? customLabel; // Add this parameter
 
   const ReminderTimePicker({
     Key? key,
@@ -13,50 +14,61 @@ class ReminderTimePicker extends StatelessWidget {
     required this.time,
     required this.hasAttempted,
     required this.onSelect,
+    this.customLabel, // Add this parameter
   }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppStyles.padding),
-      child: SizedBox(
-        width: double.infinity,
-        child: InkWell(
-          onTap: () => _selectTime(context),
-          borderRadius: BorderRadius.circular(AppStyles.borderRadius),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: (hasAttempted && time == null)
-                    ? Colors.red
-                    : Colors.grey[300]!,
-              ),
-              borderRadius: BorderRadius.circular(AppStyles.borderRadius),
-              color: Colors.grey[50],
+@override
+Widget build(BuildContext context) {
+  // Determine what text to display based on whether customLabel is provided
+  String displayText;
+  String placeholderText;
+  
+  if (customLabel != null) {
+    displayText = time != null ? '$customLabel: ${time?.format(context)}' : 'Select $customLabel';
+    placeholderText = 'Select $customLabel';
+  } else {
+    displayText = time != null ? 'Reminder Time ${index + 1}: ${time?.format(context)}' : 'Select Reminder Time ${index + 1}';
+    placeholderText = 'Select Reminder Time ${index + 1}';
+  }
+
+  return Padding(
+    padding: const EdgeInsets.all(AppStyles.padding),
+    child: SizedBox(
+      width: double.infinity,
+      child: InkWell(
+        onTap: () => _selectTime(context),
+        borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: (hasAttempted && time == null)
+                  ? Colors.red
+                  : Colors.grey[300]!,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    time != null
-                        ? 'Reminder Time ${index + 1}: ${time?.format(context)}'
-                        : 'Select Reminder Time ${index + 1}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: time != null ? Colors.black : Colors.grey[700],
-                    ),
+            borderRadius: BorderRadius.circular(AppStyles.borderRadius),
+            color: Colors.grey[50],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  displayText,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: time != null ? Colors.black : Colors.grey[700],
                   ),
-                  Icon(Icons.access_time, color: AppStyles.primaryColor),
-                ],
-              ),
+                ),
+                const Icon(Icons.access_time, color: AppStyles.primaryColor),
+              ],
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
  Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
@@ -65,11 +77,11 @@ class ReminderTimePicker extends StatelessWidget {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: const Color.fromARGB(255, 241, 227, 217), // Secondary button background color
+            colorScheme: const ColorScheme.light(
+              primary: Color.fromARGB(255, 241, 227, 217), // Secondary button background color
               onPrimary: Colors.black, // Secondary button text color
               onSurface: Colors.black, // Text color on the surface
-               secondary: const Color.fromARGB(255, 44, 20, 3), // AM/PM button background color
+               secondary: Color.fromARGB(255, 44, 20, 3), // AM/PM button background color
             onSecondary: Colors.white, // AM/PM button text color
             ),
             textButtonTheme: TextButtonThemeData(

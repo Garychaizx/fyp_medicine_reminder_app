@@ -111,50 +111,66 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
     }
   }
 
-  Future<void> _saveMedication() async {
-    if (nameController.text.isEmpty ||
-        _frequency == null ||
-        currentInventoryController.text.isEmpty ||
-        doseQuantityController.text.isEmpty) {
-      setState(() {
-        _hasAttemptedSubmit = true;
-      });
-      return;
-    }
-
-    try {
-      final updatedData = {
-        'name': nameController.text,
-        'reminder_times': reminderTimeControllers.map((c) => c.text).toList(),
-        'frequency': _frequency,
-        'current_inventory': int.tryParse(currentInventoryController.text) ?? 0,
-        'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
-        'refill_threshold': int.tryParse(refillThresholdController.text) ?? 0,
-        'refill_reminder_enabled': refillReminderEnabled,
-        'imageBase64': imageBase64,
-        'refill_reminder_time': refillReminderTime != null
-            ? _medicationService.formatTimeOfDay(refillReminderTime!, context)
-            : null,
-      };
-
-      await _medicationService.saveMedication(
-        medicationId: widget.medicationId,
-        medicationData: updatedData,
-        isEveryXHours: _frequency == "Every X Hours",
-        medicationName: nameController.text,
-        reminderTimes: reminderTimeControllers.map((c) => c.text).toList(),
-        doseQuantity: int.parse(doseQuantityController.text),
-        unit: widget.medicationData['unit'],
-        startTime: startTimeController.text,
-        endTime: endTimeController.text,
-        intervalHours: int.tryParse(intervalHoursController.text),
-      );
-
-      Navigator.pop(context);
-    } catch (e) {
-      debugPrint('Error saving medication: $e');
-    }
+Future<void> _saveMedication() async {
+  if (nameController.text.isEmpty ||
+      _frequency == null ||
+      currentInventoryController.text.isEmpty ||
+      doseQuantityController.text.isEmpty) {
+    setState(() {
+      _hasAttemptedSubmit = true;
+    });
+    return;
   }
+
+  try {
+    final updatedData = {
+      'name': nameController.text,
+      'frequency': _frequency,
+      'current_inventory': int.tryParse(currentInventoryController.text) ?? 0,
+      'dose_quantity': int.tryParse(doseQuantityController.text) ?? 0,
+      'refill_threshold': int.tryParse(refillThresholdController.text) ?? 0,
+      'refill_reminder_enabled': refillReminderEnabled,
+      'imageBase64': imageBase64,
+      'refill_reminder_time': refillReminderTime != null
+          ? _medicationService.formatTimeOfDay(refillReminderTime!, context)
+          : null,
+    };
+    
+    // Handle differently based on frequency type
+    if (_frequency == "Every X Hours") {
+      // For interval-based reminders, save the start, end, and interval
+      updatedData['interval_starting_time'] = startTimeController.text;
+      updatedData['interval_ending_time'] = endTimeController.text;
+      updatedData['interval_hour'] = int.tryParse(intervalHoursController.text) ?? 0;
+      // Include an empty reminder_times array as a placeholder
+      updatedData['reminder_times'] = [];
+    } else {
+      // For regular reminders, save the reminder times
+      updatedData['reminder_times'] = reminderTimeControllers.map((c) => c.text).toList();
+      // Remove any interval data
+      updatedData.remove('interval_starting_time');
+      updatedData.remove('interval_ending_time');
+      updatedData.remove('interval_hour');
+    }
+
+    await _medicationService.saveMedication(
+      medicationId: widget.medicationId,
+      medicationData: updatedData,
+      isEveryXHours: _frequency == "Every X Hours",
+      medicationName: nameController.text,
+      reminderTimes: reminderTimeControllers.map((c) => c.text).toList(),
+      doseQuantity: int.parse(doseQuantityController.text),
+      unit: widget.medicationData['unit'],
+      startTime: startTimeController.text,
+      endTime: endTimeController.text,
+      intervalHours: int.tryParse(intervalHoursController.text),
+    );
+
+    Navigator.pop(context);
+  } catch (e) {
+    debugPrint('Error saving medication: $e');
+  }
+}
 
   Future<void> _deleteMedication() async {
     try {
@@ -309,41 +325,40 @@ class _EditMedicationFormState extends State<EditMedicationForm> {
               }).toList(),
             ],
 
-            if (_frequency == "Every X Hours") ...[
-              ReminderTimePicker(
-                index: 0,
-                time: _medicationService
-                    .parseTimeString(startTimeController.text),
-                hasAttempted: _hasAttemptedSubmit,
-                onSelect: (selectedTime) {
-                  setState(() {
-                    startTimeController.text =
-                        selectedTime?.format(context) ?? '';
-                  });
-                },
-              ),
-              ReminderTimePicker(
-                index: 1,
-                time:
-                    _medicationService.parseTimeString(endTimeController.text),
-                hasAttempted: _hasAttemptedSubmit,
-                onSelect: (selectedTime) {
-                  setState(() {
-                    endTimeController.text =
-                        selectedTime?.format(context) ?? '';
-                  });
-                },
-              ),
-              CustomFormField(
-                controller: intervalHoursController,
-                label: 'Interval (Hours)',
-                keyboardType: TextInputType.number,
-                errorText:
-                    _hasAttemptedSubmit && intervalHoursController.text.isEmpty
-                        ? 'Required'
-                        : null,
-              ),
-            ],
+if (_frequency == "Every X Hours") ...[
+  // First time picker (start time)
+  ReminderTimePicker(
+    index: 0,
+    time: _medicationService.parseTimeString(startTimeController.text),
+    hasAttempted: _hasAttemptedSubmit,
+    onSelect: (selectedTime) {
+      setState(() {
+        startTimeController.text = selectedTime?.format(context) ?? '';
+      });
+    },
+    customLabel: "From", // Add this parameter
+  ),
+  // Second time picker (end time)
+  ReminderTimePicker(
+    index: 1,
+    time: _medicationService.parseTimeString(endTimeController.text),
+    hasAttempted: _hasAttemptedSubmit,
+    onSelect: (selectedTime) {
+      setState(() {
+        endTimeController.text = selectedTime?.format(context) ?? '';
+      });
+    },
+    customLabel: "To     ", // Add this parameter
+  ),
+  CustomFormField(
+    controller: intervalHoursController,
+    label: 'Interval (Hours)',
+    keyboardType: TextInputType.number,
+    errorText: _hasAttemptedSubmit && intervalHoursController.text.isEmpty
+        ? 'Required'
+        : null,
+  ),
+],
             // Current Inventory
             CustomFormField(
               controller: currentInventoryController,

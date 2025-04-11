@@ -12,7 +12,7 @@ class MedicationAdherenceCard extends StatelessWidget {
   final String? imageBase64;
   final int takenCount;
   final int currentInventory;
- 
+
   const MedicationAdherenceCard({
     Key? key,
     required this.medicationId,
@@ -22,7 +22,7 @@ class MedicationAdherenceCard extends StatelessWidget {
     required this.currentInventory,
   }) : super(key: key);
 
-
+  
   Future<Map<String, dynamic>> fetchAdherenceData(String medicationId) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -59,7 +59,7 @@ class MedicationAdherenceCard extends StatelessWidget {
     }
   }
 
-   double calculateAdherenceRate() {
+  double calculateAdherenceRate() {
     if (currentInventory == 0) return 0.0; // Avoid division by zero
     return (takenCount / currentInventory).clamp(0.0, 1.0);
   }
@@ -80,21 +80,28 @@ class MedicationAdherenceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Medication Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: imageBase64 != null && imageBase64!.isNotEmpty
-                  ? Image.memory(
-                      base64Decode(imageBase64!),
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    )
-                  : Image.asset(
-                      'assets/pill.png', // Default image
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
+            GestureDetector(
+              onTap: () {
+                if (imageBase64 != null && imageBase64!.isNotEmpty) {
+                  showImageDialog(context, imageBase64!);
+                }
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: imageBase64 != null && imageBase64!.isNotEmpty
+                    ? Image.memory(
+                        base64Decode(imageBase64!),
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      )
+                    : Image.asset(
+                        'assets/pill.png', // Default image
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                      ),
+              ),
             ),
             const SizedBox(width: 16),
             // Medication Details and Progress Bar
@@ -132,7 +139,8 @@ class MedicationAdherenceCard extends StatelessWidget {
               percent: adherenceRate,
               center: Text(
                 '${(adherenceRate * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               progressColor: adherenceRate >= 0.8 ? Colors.green : Colors.red,
               backgroundColor: Colors.grey[300]!,
