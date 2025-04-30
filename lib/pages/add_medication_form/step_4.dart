@@ -113,6 +113,7 @@ class _Step4State extends State<Step4> {
           SwitchListTile(
             title: const Text('Refill Reminder'),
             value: widget.formData.refillReminderEnabled,
+            activeColor: const Color(0xFF34C759),
             onChanged: (value) {
               setState(() {
                 widget.formData.refillReminderEnabled = value;

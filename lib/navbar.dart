@@ -12,13 +12,16 @@ import 'package:medicine_reminder/services/auth_service.dart';
 
 Future<Map<String, dynamic>> fetchUserData() async {
   final user = FirebaseAuth.instance.currentUser;
-  if (user == null) throw Exception("No logged-in user found");
-
-  final userDoc =
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-  if (!userDoc.exists) throw Exception("User data not found");
-
-  return userDoc.data()!;
+  if (user == null) return {}; // Return empty map instead of throwing exception
+  
+  try {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) return {};
+    return userDoc.data()!;
+  } catch (e) {
+    print("Error fetching user data: $e");
+    return {};
+  }
 }
 
 class Navbar extends StatefulWidget {
@@ -33,20 +36,28 @@ class _NavBarState extends State<Navbar> {
 
   final AuthService _authService = AuthService();
 
-  void handleLogout(BuildContext context) async {
-    await _authService.logOut();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => LoginPage()),
-    );
-  }
+void handleLogout(BuildContext context) async {
+  await _authService.logOut();
+  // Navigate to login page and replace the entire navigation stack
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => LoginPage()),
+    (route) => false, // This removes all previous routes
+  );
+}
 
-  final List<Widget> _pages = [
-    TaskVisualizationPage(),
-        StreamBuilder<QuerySnapshot>(
+final List<Widget> _pages = [
+  TaskVisualizationPage(),
+  // Wrap in a conditional check
+  Builder(builder: (context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Center(child: Text('Please log in to view adherence data.'));
+    }
+    
+    return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('medications')
-          .where('user_uid', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+          .where('user_uid', isEqualTo: currentUser.uid)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -65,12 +76,20 @@ class _NavBarState extends State<Navbar> {
           return MedicationAdherencePage(medications: medications);
         }
       },
-    ),
-    MedicationsPage(),
-    NearbyPharmacyPage(),
-    FutureBuilder<Map<String, dynamic>>(
+    );
+  }),
+  MedicationsPage(),
+  NearbyPharmacyPage(),
+  // Also wrap this FutureBuilder
+  Builder(builder: (context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Center(child: Text('Please log in to view profile.'));
+    }
+    
+    return FutureBuilder<Map<String, dynamic>>(
       future: fetchUserData(),
-      builder: (context, snapshot) {
+  builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
@@ -79,8 +98,9 @@ class _NavBarState extends State<Navbar> {
           return ProfilePage(userData: snapshot.data ?? {});
         }
       },
-    ),
-  ];
+    );
+  }),
+];
 
   final List<String> _titles = [
     'Home',
@@ -96,7 +116,7 @@ class _NavBarState extends State<Navbar> {
       appBar: AppBar(
         title: Text(
           _titles[_currentIndex],
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 20, // Adjust font size as needed
             fontWeight: FontWeight.bold, // Make it bold
             color: Colors.black, // Change color to white

@@ -5,11 +5,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
+import 'package:medicine_reminder/services/adherence_analysis_service.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/services/medicines_databse_service.dart';
 import 'package:medicine_reminder/services/notification_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:medicine_reminder/widgets/medication_card.dart';
+import 'package:medicine_reminder/utils/dialog_helper.dart';
 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -138,14 +140,17 @@ Future<void> onNotificationDisplayedMethod(ReceivedNotification receivedNotifica
 Future<void> scheduleAllNotifications() async {
   try {
     MedicationService medicationService = MedicationService();
-    String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
-
-    if (currentUserId == null) {
+        final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
       print('No user is currently logged in.');
       return;
     }
 
-    var medications = await FirebaseFirestore.instance.collection('medications').where('user_uid', isEqualTo: currentUserId).get();
+    var medications = await FirebaseFirestore.instance
+        .collection('medications')
+        .where('user_uid', isEqualTo: currentUser.uid)
+        .get();
+
     print('Fetched ${medications.docs.length} medications from Firestore.');
     
     // List to hold scheduled medications
@@ -214,7 +219,77 @@ Future<void> scheduleAllNotifications() async {
   }
 }
 
-
+// Add to main.dart
+Future<void> setupAdherenceAnalysis() async {
+  print("Starting adherence analysis setup...");
+  final currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) {
+    print("No current user found!");
+    return;
+  }
+  
+  print("Analyzing medication adherence for user: ${currentUser.uid}");
+  final analysisService = AdherenceAnalysisService();
+  final suggestions = await analysisService.analyzeMedicationAdherence(currentUser.uid);
+  
+  print("Adherence analysis complete. Found ${suggestions.length} suggestions");
+  
+  // Show suggestions if there are any
+  if (suggestions.isNotEmpty && navigatorKey.currentContext != null) {
+    print("Preparing to show adherence suggestions");
+    
+    // Show one suggestion at a time
+    for (var suggestion in suggestions) {
+      print("Processing suggestion for ${suggestion['medicationName']} at ${suggestion['currentTime']}");
+      
+      // Create a slight delay between suggestions if there are multiple
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Only show dialog if context is available
+if (navigatorKey.currentContext != null && suggestion['suggestedTime'] != null) {
+  print("Showing adherence suggestion dialog");
+  final medicationService = MedicationService();
+  
+  showAdherenceSuggestionDialog(
+    navigatorKey.currentContext!,
+    suggestion['medicationName'],
+    suggestion['currentTime'],
+    suggestion['suggestedTime'],
+    suggestion['reason'] ?? 'A different time might work better for your schedule.',
+    () async {
+      print("User accepted suggestion to change time");
+            // Update the medication reminder time
+            await medicationService.updateMedicationReminderTime(
+              suggestion['medicationId'],
+              suggestion['currentTime'],
+              suggestion['suggestedTime'],
+            );
+            
+            // Reschedule notifications
+            await scheduleAllNotifications();
+            
+            // Show confirmation
+            if (navigatorKey.currentContext != null) {
+              ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+                SnackBar(content: Text('Reminder time updated successfully!')),
+              );
+            }
+          },
+        );
+      } else {
+         print("Cannot show dialog: ${suggestion['suggestedTime'] == null ? 'No suggested time available' : 'No valid context'}");
+      }
+    }
+  } else {
+    print("No suggestions to show or context is null");
+    if (suggestions.isEmpty) {
+      print("No adherence suggestions generated");
+    }
+    if (navigatorKey.currentContext == null) {
+      print("Navigator context is null");
+    }
+  }
+}
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -302,11 +377,17 @@ await AwesomeNotifications().setListeners(
 
   // Schedule notifications at app start
   await scheduleAllNotifications();
-  print('All notifications scheduled.');
+  // print('All notifications scheduled.');
 
   NotificationService().monitorMedicationInventory();
   await MedicineDatabase.loadMedicines();
   runApp(const MyApp());
+  Future.delayed(const Duration(seconds: 5), () {
+    if (navigatorKey.currentContext != null && 
+        navigatorKey.currentContext!.mounted) {
+      setupAdherenceAnalysis();
+    }
+  });
 }
 
 class MyApp extends StatelessWidget {

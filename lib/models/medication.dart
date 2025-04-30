@@ -41,6 +41,7 @@ class Medication {
       'reminder_times': reminderTimes,
       'dose_quantity': doseQuantity,
       'current_inventory': currentInventory,
+      'total_dosage_required': currentInventory,
       'user_uid': userUid,
       'refill_reminder_enabled': refillReminderEnabled,
       'refill_threshold': refillThreshold,

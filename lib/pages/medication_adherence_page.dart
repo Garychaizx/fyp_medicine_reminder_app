@@ -3,56 +3,56 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/widgets/medication_adherence_card.dart';
 
+
 class MedicationAdherencePage extends StatelessWidget {
   final List<Map<String, dynamic>> medications;
 
   const MedicationAdherencePage({Key? key, required this.medications})
       : super(key: key);
 
-  Future<List<Map<String, dynamic>>> fetchAdherenceData() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      return [];
-    }
-
+  Future<List<Map<String, dynamic>>> fetchAllAdherenceData() async {
     try {
-      // Fetch medications for the current user
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return [];
+
+      // Fetch all medications for the current user
       final medicationsSnapshot = await FirebaseFirestore.instance
           .collection('medications')
           .where('user_uid', isEqualTo: currentUser.uid)
           .get();
 
-      final medications = medicationsSnapshot.docs.map((doc) {
-        final data = doc.data();
-        data['id'] = doc.id; // Add the document ID
-        return data;
-      }).toList();
+      List<Map<String, dynamic>> adherenceDataList = [];
 
-      // Fetch adherence logs and calculate adherence rate for each medication
-      final List<Map<String, dynamic>> adherenceData = [];
-      for (final medication in medications) {
+      for (var medicationDoc in medicationsSnapshot.docs) {
+        final medicationData = medicationDoc.data();
+        final medicationId = medicationDoc.id;
+        final medicationName = medicationData['name'] ?? 'Unknown';
+        final imageBase64 = medicationData['imageBase64'];
+        final totalDosageRequired =
+            medicationData['total_dosage_required'] ?? 0;
+
+        // Fetch adherence logs for the medication
         final adherenceLogsSnapshot = await FirebaseFirestore.instance
             .collection('adherence_logs')
             .where('user_uid', isEqualTo: currentUser.uid)
-            .where('medication_id', isEqualTo: medication['id'])
+            .where('medication_id', isEqualTo: medicationId)
             .where('status', isEqualTo: 'taken') // Only count "taken" logs
             .get();
 
         final takenCount = adherenceLogsSnapshot.docs.length;
-        final currentInventory = medication['current_inventory'] ?? 0;
 
-        adherenceData.add({
-          'id': medication['id'],
-          'name': medication['name'],
-          'imageBase64': medication['imageBase64'],
+        adherenceDataList.add({
+          'medicationId': medicationId,
+          'medicationName': medicationName,
+          'imageBase64': imageBase64,
           'takenCount': takenCount,
-          'currentInventory': currentInventory,
+          'totalDosageRequired': totalDosageRequired,
         });
       }
 
-      return adherenceData;
+      return adherenceDataList;
     } catch (e) {
-      print('Error fetching adherence data: $e');
+      print('Error fetching all adherence data: $e');
       return [];
     }
   }
@@ -62,50 +62,36 @@ class MedicationAdherencePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F4F1),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: fetchAdherenceData(),
+        future: fetchAllAdherenceData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Show a unified loading spinner
+            // Show a unified loading spinner with custom color
             return const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
-                    Color.fromARGB(255, 56, 26, 3)), // Change color here
-              ),
-            );
-          }
-
-          if (snapshot.hasError) {
-            // Show an error message if something goes wrong
-            return Center(
-              child: Text(
-                'Error loading medications: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
+                  Color.fromARGB(
+                      255, 56, 26, 3), // Custom color for the spinner
+                ),
               ),
             );
           }
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            // Show a message if there are no medications
-            return const Center(
-              child: Text(
-                'No medications found.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
+            return const Center(child: Text('No medications found.'));
           }
+          final adherenceDataList = snapshot.data!;
 
-          // Render the list of adherence cards once data is loaded
-          final medicationsData = snapshot.data!;
           return ListView.builder(
-            itemCount: medicationsData.length,
+            itemCount: adherenceDataList.length,
             itemBuilder: (context, index) {
-              final medication = medicationsData[index];
+              final adherenceData = adherenceDataList[index];
               return MedicationAdherenceCard(
-                medicationId: medication['id'],
-                medicationName: medication['name'],
-                imageBase64: medication['imageBase64'],
-                takenCount: medication['takenCount'],
-                currentInventory: medication['currentInventory'],
+                medicationId: adherenceData['medicationId'],
+                medicationName: adherenceData['medicationName'],
+                imageBase64: adherenceData['imageBase64'],
+                takenCount: adherenceData['takenCount'],
+                currentInventory: adherenceData[
+                    'totalDosageRequired'], // Pass total dosage required
               );
             },
           );

@@ -22,7 +22,7 @@ class AppStyles {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
-        borderSide: BorderSide(color: primaryColor, width: 2),
+        borderSide: BorderSide(color: Color.fromARGB(255, 56, 26, 3), width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );

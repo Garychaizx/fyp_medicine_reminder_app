@@ -1,11 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:medicine_reminder/main.dart';
-import 'package:medicine_reminder/navbar.dart';
-import 'package:medicine_reminder/pages/signup_page.dart';
-import 'package:medicine_reminder/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'signup_page.dart';
+import '../navbar.dart';
+import '../constants/styles.dart'; // Assuming AppStyles is defined here
+import '../widgets/custom_form_field.dart'; // Assuming CustomFormField is defined here
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({Key? key}) : super(key: key);
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -13,77 +16,127 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final AuthService authService = AuthService();
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   void handleLogin() async {
-    final email = emailController.text;
-    final password = passwordController.text;
-    final user = await authService.logIn(email, password);
-  
-    if (user != null) {
-      // Navigate to the main app (e.g., Navbar)
-      await scheduleAllNotifications();
-      Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => Navbar()));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed! Check your credentials.')),
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const Navbar()),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login failed! Try again.')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Login')),
+      backgroundColor: const Color(0xFFF8F4F1),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: InputDecoration(labelText: 'Email'),
-              // obscureText: true,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 50),
+                Image.asset(
+                  'assets/logo.png', // Replace with your logo path
+                  height: 200,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Welcome Back!',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 20),
+                CustomFormField(
+                  controller: emailController,
+                  label: 'Email',
+                  keyboardType: TextInputType.emailAddress,
+                  // validator: (value) {
+                  //   if (value == null || value.isEmpty) {
+                  //     return 'Please enter your email';
+                  //   }
+                  //   return null;
+                  // },
+                ),
+                const SizedBox(height: 10),
+                CustomFormField(
+                  controller: passwordController,
+                  label: 'Password',
+                  obscureText: true,
+                  // validator: (value) {
+                  //   if (value == null || value.isEmpty) {
+                  //     return 'Please enter your password';
+                  //   }
+                  //   return null;
+                  // },
+                ),
+                const SizedBox(height: 20),
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: handleLogin,
+                        style: AppStyles.submitButtonStyle,
+                        child: const Text('Login'),
+                      ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => SignupPage()),
+                    );
+                  },
+                  child: Text.rich(
+                    TextSpan(
+                      text: "Don't have an account? ",
+                      style: const TextStyle(
+                          color: Colors.black), // Default text style
+                      children: [
+                        TextSpan(
+                          text: "Sign up",
+                          style: const TextStyle(
+                            color:
+                                Color.fromARGB(255, 69, 48, 2), // Make "Sign up" look like a link
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const SignupPage()),
+                              );
+                            },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            TextField(
-              controller: passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: handleLogin,
-              child: Text('Login'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SignupPage()),
-                );
-              },
-              child: Text('Don’t have an account? Sign up'),
-            ),
-            TextButton(
-              onPressed: () async {
-                try {
-                  await FirebaseAuth.instance.sendPasswordResetEmail(
-                      email: emailController.text.trim());
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Password reset email sent')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content:
-                            Text('Error sending reset email: ${e.toString()}')),
-                  );
-                }
-              },
-              child: Text('Forgot Password?'),
-            ),
-          ],
+          ),
         ),
       ),
     );

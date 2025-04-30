@@ -492,5 +492,62 @@ Future<void> updateAdherenceLog({
   }
 }
 
-
+// Add this to your MedicationService class
+Future<void> updateMedicationReminderTime(
+  String medicationId,
+  String oldTime,
+  String newTime,
+) async {
+  try {
+    print("Updating medication reminder time: $oldTime → $newTime");
+    
+    // Get the medication document
+    final medicationDoc = await FirebaseFirestore.instance
+        .collection('medications')
+        .doc(medicationId)
+        .get();
+    
+    if (!medicationDoc.exists) {
+      print("Medication not found");
+      return;
+    }
+    
+    final medicationData = medicationDoc.data()!;
+    
+    // Handle different frequency types
+    if (medicationData['frequency'] == 'Every X Hours') {
+      // For interval-based medications
+      if (medicationData['interval_starting_time'] == oldTime) {
+        await FirebaseFirestore.instance
+            .collection('medications')
+            .doc(medicationId)
+            .update({'interval_starting_time': newTime});
+        print("Updated interval start time");
+      } else if (medicationData['interval_ending_time'] == oldTime) {
+        await FirebaseFirestore.instance
+            .collection('medications')
+            .doc(medicationId)
+            .update({'interval_ending_time': newTime});
+        print("Updated interval end time");
+      }
+    } else {
+      // For regular medications with specific times
+      List<String> reminderTimes = List<String>.from(medicationData['reminder_times'] ?? []);
+      final index = reminderTimes.indexOf(oldTime);
+      
+      if (index != -1) {
+        reminderTimes[index] = newTime;
+        
+        await FirebaseFirestore.instance
+            .collection('medications')
+            .doc(medicationId)
+            .update({'reminder_times': reminderTimes});
+        print("Updated reminder time in array");
+      }
+    }
+    
+  } catch (e) {
+    print('Error updating medication reminder time: $e');
+  }
+}
 }

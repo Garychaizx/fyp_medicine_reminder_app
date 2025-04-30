@@ -27,7 +27,7 @@ class _Step3State extends State<Step3> {
   final List<String> _options = [
     'Multiple times daily',
     'Every X Hours',
-    'Every X Days',
+    // 'Every X Days',
   ];
 
   final List<int> _timesOptions = [4, 5, 6, 7];
@@ -174,7 +174,7 @@ class _Step3State extends State<Step3> {
                               isSelected ? Colors.grey.shade300 : Colors.white,
                           border: Border.all(
                             color: isSelected
-                                ? Color.fromARGB(255, 11, 24, 66)
+                                ? Color.fromARGB(255, 56, 26, 3)
                                 : Colors.grey,
                             width: isSelected ? 2 : 1,
                           ),
@@ -189,7 +189,7 @@ class _Step3State extends State<Step3> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
                                 color: isSelected
-                                    ? Color.fromARGB(255, 11, 24, 66)
+                                    ? Colors.black
                                     : Colors.black,
                               ),
                             ),
@@ -204,7 +204,7 @@ class _Step3State extends State<Step3> {
                                   }
                                 });
                               },
-                              activeColor: Color.fromARGB(255, 11, 24, 66),
+                              activeColor: Color.fromARGB(255, 56, 26, 3),
                             ),
                           ],
                         ),
@@ -285,7 +285,7 @@ class _Step3State extends State<Step3> {
                                   onPressed: _showHourPicker,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor:
-                                        const Color.fromARGB(255, 11, 24, 66),
+                                        const Color.fromARGB(249, 168, 108, 62),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 10),

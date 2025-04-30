@@ -59,7 +59,7 @@ class _HourPickerModalState extends State<HourPickerModal> {
                 selectedTextStyle: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 11, 24, 66)),
+                    color: Colors.black),
                 textStyle: const TextStyle(fontSize: 18, color: Colors.grey),
                 onChanged: (newValue) {
                   setState(() {
@@ -78,7 +78,7 @@ class _HourPickerModalState extends State<HourPickerModal> {
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 11, 24, 66),
+                backgroundColor: Color.fromARGB(255, 56, 26, 3),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),

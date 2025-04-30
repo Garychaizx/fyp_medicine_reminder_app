@@ -35,7 +35,7 @@ class FrequencyOption extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected
-                    ? Color.fromARGB(255, 11, 24, 66)
+                    ? Color.fromARGB(255, 56, 26, 3)
                     : Colors.grey.shade300,
                 width: 1.5,
               ),
@@ -60,7 +60,7 @@ class FrequencyOption extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: isSelected
-                                  ? Color.fromARGB(255, 11, 24, 66)
+                                  ? Color.fromARGB(255, 56, 26, 3)
                                   : Colors.grey.shade800,
                             ),
                       ),
@@ -80,7 +80,7 @@ class FrequencyOption extends StatelessWidget {
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
                   color: isSelected
-                      ? Color.fromARGB(255, 11, 24, 66)
+                      ? const Color.fromARGB(255, 255, 234, 219)
                       : Colors.grey.shade400,
                 ),
               ],

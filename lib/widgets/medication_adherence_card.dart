@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart'; // Add this package for circular progress
-
 import 'package:medicine_reminder/utils/dialog_helper.dart';
 
 class MedicationAdherenceCard extends StatelessWidget {
@@ -22,51 +21,14 @@ class MedicationAdherenceCard extends StatelessWidget {
     required this.currentInventory,
   }) : super(key: key);
 
-  
-  Future<Map<String, dynamic>> fetchAdherenceData(String medicationId) async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return {};
-
-      // Fetch adherence logs
-      final adherenceLogsSnapshot = await FirebaseFirestore.instance
-          .collection('adherence_logs')
-          .where('user_uid', isEqualTo: currentUser.uid)
-          .where('medication_id', isEqualTo: medicationId)
-          .where('status', isEqualTo: 'taken') // Only count "taken" logs
-          .get();
-
-      // Fetch medication data
-      final medicationSnapshot = await FirebaseFirestore.instance
-          .collection('medications')
-          .doc(medicationId)
-          .get();
-
-      if (!medicationSnapshot.exists) {
-        return {};
-      }
-
-      final medicationData = medicationSnapshot.data()!;
-      final int currentInventory = medicationData['current_inventory'] ?? 0;
-
-      return {
-        'takenCount': adherenceLogsSnapshot.docs.length,
-        'currentInventory': currentInventory,
-      };
-    } catch (e) {
-      print('Error fetching adherence data: $e');
-      return {};
-    }
-  }
-
-  double calculateAdherenceRate() {
-    if (currentInventory == 0) return 0.0; // Avoid division by zero
-    return (takenCount / currentInventory).clamp(0.0, 1.0);
+  double calculateAdherenceRate(int takenCount, int totalDosageRequired) {
+    if (totalDosageRequired == 0) return 0.0; // Avoid division by zero
+    return (takenCount / totalDosageRequired).clamp(0.0, 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    final adherenceRate = calculateAdherenceRate();
+    final adherenceRate = calculateAdherenceRate(takenCount, currentInventory);
 
     return Card(
       margin: const EdgeInsets.all(8.0),
@@ -139,8 +101,7 @@ class MedicationAdherenceCard extends StatelessWidget {
               percent: adherenceRate,
               center: Text(
                 '${(adherenceRate * 100).toStringAsFixed(1)}%',
-                style:
-                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               progressColor: adherenceRate >= 0.8 ? Colors.green : Colors.red,
               backgroundColor: Colors.grey[300]!,
