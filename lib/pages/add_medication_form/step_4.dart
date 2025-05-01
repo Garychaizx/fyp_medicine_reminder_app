@@ -22,21 +22,23 @@ class Step4 extends StatefulWidget {
 class _Step4State extends State<Step4> {
   bool hasAttempted = false;
 
-  @override
-  Widget build(BuildContext context) {
-    bool isEveryXHours = widget.formData.frequency == "Every X Hours";
-    if (isEveryXHours) {
-      // Reset reminderTimes to prevent old values from being used
-      widget.formData.reminderTimes = <TimeOfDay>[];
-    } else {
-      // Ensure that previous reminderTimes exist for normal cases
-      widget.formData.reminderTimes ??= [];
-    }
-    // Ensure startingTime and endingTime exist in formData
-    widget.formData.startingTime ??= TimeOfDay.now();
-    widget.formData.endingTime ??= TimeOfDay.now();
+@override
+Widget build(BuildContext context) {
+  bool isEveryXHours = widget.formData.frequency == "Every X Hours";
+  if (isEveryXHours) {
+    // Reset reminderTimes to prevent old values from being used
+    widget.formData.reminderTimes = <TimeOfDay>[];
+  } else {
+    // Ensure that previous reminderTimes exist for normal cases
+    widget.formData.reminderTimes ??= [];
+  }
+  // Ensure startingTime and endingTime exist in formData
+  widget.formData.startingTime ??= TimeOfDay.now();
+  widget.formData.endingTime ??= TimeOfDay.now();
 
-    return SingleChildScrollView(
+  return Container(
+    color: const Color(0xFFF8F4F1), // Set the background color here
+    child: SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -54,7 +56,6 @@ class _Step4State extends State<Step4> {
             ReminderTimePicker(
               index: 0,
               time: widget.formData.startingTime,
-              // label: "Starting Time",
               hasAttempted: hasAttempted,
               onSelect: (time) {
                 setState(() {
@@ -65,7 +66,6 @@ class _Step4State extends State<Step4> {
             ReminderTimePicker(
               index: 1,
               time: widget.formData.endingTime,
-              // label: "Ending Time",
               hasAttempted: hasAttempted,
               onSelect: (time) {
                 setState(() {
@@ -182,11 +182,13 @@ class _Step4State extends State<Step4> {
                   style: AppStyles.secondaryButtonStyle,
                   child: const Text('Back'),
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           )
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

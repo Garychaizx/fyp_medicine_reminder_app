@@ -133,7 +133,9 @@ class _AddMedicationFormState extends State<AddMedicationForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+         backgroundColor: const Color(0xFFF8F4F1),
+      ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {

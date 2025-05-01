@@ -80,7 +80,7 @@ class FrequencyOption extends StatelessWidget {
                       ? Icons.check_circle
                       : Icons.radio_button_unchecked,
                   color: isSelected
-                      ? const Color.fromARGB(255, 255, 234, 219)
+                      ? const Color.fromARGB(255, 56, 26, 3)
                       : Colors.grey.shade400,
                 ),
               ],

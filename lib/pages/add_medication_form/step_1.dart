@@ -44,9 +44,11 @@ class _Step1State extends State<Step1> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
+@override
+Widget build(BuildContext context) {
+  return Container(
+    color: const Color(0xFFF8F4F1), // Set the background color here
+    child: SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -169,6 +171,7 @@ class _Step1State extends State<Step1> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
