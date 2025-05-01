@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 
 class AdherenceAnalysisService {
   // Configure the threshold for suggesting a time change
@@ -83,33 +86,13 @@ class AdherenceAnalysisService {
     }
   }
   
-  /// Analyze adherence for a specific medication at a specific time
-// Fixed version of _analyzeReminderTimeAdherence method
 Future<Map<String, dynamic>> _analyzeReminderTimeAdherence(
-  String userId, 
-  String medicationId, 
-  String reminderTime
+  String userId,
+  String medicationId,
+  String reminderTime,
 ) async {
   try {
     // Get adherence logs for the past 30 days
-    final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-    
-    print("⚠️ DEBUG QUERY: Checking logs for $medicationId at time $reminderTime");
-    
-    // First, check if ANY logs exist for this medication/time to confirm query structure
-    final allLogsSnapshot = await FirebaseFirestore.instance
-        .collection('adherence_logs')
-        .where('medication_id', isEqualTo: medicationId)
-        .limit(5)
-        .get();
-        
-    print("⚠️ Found ${allLogsSnapshot.docs.length} total logs for this medication");
-    
-    if (allLogsSnapshot.docs.isNotEmpty) {
-      print("⚠️ Sample log data: ${allLogsSnapshot.docs.first.data()}");
-    }
-    
-    // Now perform the actual query for missed logs
     final logsSnapshot = await FirebaseFirestore.instance
         .collection('adherence_logs')
         .where('user_uid', isEqualTo: userId)
@@ -117,28 +100,53 @@ Future<Map<String, dynamic>> _analyzeReminderTimeAdherence(
         .where('specific_reminder_time', isEqualTo: reminderTime)
         .where('status', isEqualTo: 'missed')
         .get();
-    
+
     int missedCount = logsSnapshot.docs.length;
     List<DateTime> missedTimes = [];
-    
-    print("⚠️ Found $missedCount missed logs for time $reminderTime");
-    
-    // Print each missed log for debugging
+
     for (var logDoc in logsSnapshot.docs) {
       final logData = logDoc.data();
-      print("⚠️ Missed log: ${logData['timestamp']}, ${logData['specific_reminder_time']}");
-      
       if (logData['timestamp'] != null) {
         final timestamp = (logData['timestamp'] as Timestamp).toDate();
         missedTimes.add(timestamp);
       }
     }
-    
-    // Only suggest changes if there are enough misses
+
+    // Only suggest changes or send emails if there are enough misses
     if (missedCount >= MISSED_THRESHOLD) {
-      print("⚠️ Threshold reached ($MISSED_THRESHOLD), calculating suggested time");
-      
-      // Analyze missed times to find patterns
+      // Fetch caregiver email
+      final caregiverEmail = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get()
+          .then((doc) => doc.data()?['caregiver_email']);
+
+      if (caregiverEmail != null) {
+        // Fetch the user's name
+        final userSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+        final userName = userSnapshot.data()?['name'] ?? 'Unknown User';
+
+        // Fetch the medication name using the medicationId
+        final medicationSnapshot = await FirebaseFirestore.instance
+            .collection('medications')
+            .doc(medicationId)
+            .get();
+        final medicationName = medicationSnapshot.data()?['name'] ?? 'Unknown Medication';
+
+        // Send email to caregiver
+        await sendEmailToCaregiver(
+          caregiverEmail: caregiverEmail,
+          userName: userName, // Pass the user's name
+          medicationName: medicationName, // Pass the medication name
+          reminderTime: reminderTime,
+          missedCount: missedCount,
+        );
+      }
+
+      // Suggest a better time
       final suggestedTimeInfo = _suggestBetterTime(reminderTime, missedTimes);
       return {
         'missedCount': missedCount,
@@ -146,19 +154,55 @@ Future<Map<String, dynamic>> _analyzeReminderTimeAdherence(
         'reason': suggestedTimeInfo['reason'],
       };
     }
-    
+
     return {
       'missedCount': missedCount,
       'suggestedTime': null,
       'reason': null,
     };
   } catch (e) {
-    print('⚠️ Error analyzing reminder time adherence: $e');
+    print('Error analyzing reminder time adherence: $e');
     return {
       'missedCount': 0,
       'suggestedTime': null,
       'reason': null,
     };
+  }
+}
+
+Future<void> sendEmailToCaregiver({
+  required String caregiverEmail,
+  required String userName,
+  required String medicationName,
+  required String reminderTime,
+  required int missedCount,
+}) async {
+  const String backendUrl = 'http://10.0.2.2:3000/send-email';
+
+  final emailData = {
+    'caregiverEmail': caregiverEmail,
+    'userName': userName,
+    'medicationName': medicationName,
+    'suggestedTime': reminderTime,
+    'missedCount': missedCount,
+  };
+
+  try {
+    print('Sending email with data: $emailData'); // Debug log
+
+    final response = await http.post(
+      Uri.parse(backendUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(emailData),
+    );
+
+    if (response.statusCode == 200) {
+      print('Email sent to caregiver successfully!');
+    } else {
+      print('Failed to send email to caregiver: ${response.body}');
+    }
+  } catch (e) {
+    print('Error sending email to caregiver: $e');
   }
 }
   

@@ -5,6 +5,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:medicine_reminder/navbar.dart';
 import 'package:medicine_reminder/pages/login_page.dart';
+import 'package:medicine_reminder/pages/medication_adherence_page.dart';
+import 'package:medicine_reminder/pages/profile_page.dart';
 import 'package:medicine_reminder/services/adherence_analysis_service.dart';
 import 'package:medicine_reminder/services/medication_service.dart';
 import 'package:medicine_reminder/services/medicines_databse_service.dart';
@@ -219,7 +221,6 @@ Future<void> scheduleAllNotifications() async {
   }
 }
 
-// Add to main.dart
 Future<void> setupAdherenceAnalysis() async {
   print("Starting adherence analysis setup...");
   final currentUser = FirebaseAuth.instance.currentUser;
@@ -290,6 +291,7 @@ if (navigatorKey.currentContext != null && suggestion['suggestedTime'] != null) 
     }
   }
 }
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
